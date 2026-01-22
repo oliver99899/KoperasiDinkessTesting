@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
             'is_verifikator' => \App\Http\Middleware\IsVerifikator::class,
             'check.profile' => \App\Http\Middleware\EnsureProfileFilled::class,
+            'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

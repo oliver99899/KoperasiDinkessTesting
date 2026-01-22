@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Simpanan;
+use App\Models\Pinjaman;
 
 class VerifikatorController extends Controller
 {
@@ -12,14 +13,13 @@ class VerifikatorController extends Controller
     {
         $totalAnggota = User::where('role', 'user')->where('status_akun', 'active')->count();
         $totalAset    = Simpanan::sum('jumlah'); 
-        $pendingLoan  = 0; 
+        $pendingLoan  = Pinjaman::where('status', 'pending')->count(); 
 
         $recentSimpanan = Simpanan::with('user.profile')->latest()->take(5)->get();
 
         return view('verifikator.dashboard', compact('totalAnggota', 'totalAset', 'pendingLoan', 'recentSimpanan'));
     }
 
-    // 1. FORM INPUT SIMPANAN
     public function createSimpanan()
     {
         $users = User::with('profile')
@@ -30,7 +30,6 @@ class VerifikatorController extends Controller
         return view('verifikator.simpanan.create', compact('users'));
     }
 
-    // 2. PROSES SIMPAN DATA
     public function storeSimpanan(Request $request)
     {
         $request->validate([
@@ -53,5 +52,53 @@ class VerifikatorController extends Controller
         ]);
 
         return redirect()->route('verifikator.dashboard')->with('success', 'Simpanan berhasil dicatat!');
+    }
+
+    public function indexPinjaman()
+    {
+        $pinjaman = Pinjaman::with('user.profile')
+                            ->where('status', 'pending')
+                            ->orderBy('created_at', 'asc')
+                            ->get();
+
+        return view('verifikator.pinjaman.index', compact('pinjaman'));
+    }
+
+    public function showPinjaman($id)
+    {
+        $pinjaman = Pinjaman::with(['user.profile', 'user.simpanan'])->findOrFail($id);
+
+        $totalSimpananUser = $pinjaman->user->simpanan->sum('jumlah');
+        
+        $pinjamanAktifLain = Pinjaman::where('user_id', $pinjaman->user_id)
+                                     ->where('status', 'approved')
+                                     ->where('sisa_tagihan', '>', 0)
+                                     ->count();
+
+        return view('verifikator.pinjaman.show', compact('pinjaman', 'totalSimpananUser', 'pinjamanAktifLain'));
+    }
+
+    public function approvePinjaman($id)
+    {
+        $pinjaman = Pinjaman::findOrFail($id);
+        
+        $pinjaman->update([
+            'status' => 'approved',
+            'tanggal_disetujui' => now(),
+        ]);
+
+        return redirect()->route('verifikator.pinjaman.index')->with('success', 'Pinjaman berhasil disetujui.');
+    }
+
+    public function rejectPinjaman($id)
+    {
+        $pinjaman = Pinjaman::findOrFail($id);
+        
+        $pinjaman->update([
+            'status' => 'rejected',
+            'tanggal_disetujui' => now(),
+        ]);
+
+        return redirect()->route('verifikator.pinjaman.index')->with('success', 'Pinjaman ditolak.');
     }
 }

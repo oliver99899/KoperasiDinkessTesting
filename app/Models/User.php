@@ -11,10 +11,14 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
+        'name',
         'email',
         'password',
         'role',
+        'status',
         'status_akun',
+        'activation_token',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -25,6 +29,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

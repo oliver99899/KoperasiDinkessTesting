@@ -1,4 +1,4 @@
-<x-app-layout title="Dashboard Bendahara">
+<x-app-layout title="Dashboard">
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         
@@ -14,7 +14,7 @@
 
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center gap-4">
             <div class="h-12 w-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
-                <i class="ph-fill ph-clock-countdown text-2xl"></i>
+                <i class="ph-fill ph-file-text text-2xl"></i>
             </div>
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Menunggu Verifikasi</p>
@@ -31,36 +31,6 @@
                 <h3 class="text-xl font-extrabold text-gray-900">{{ $totalAnggota }} Orang</h3>
             </div>
         </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        
-        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800">Manajemen Simpanan</h3>
-                <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Dana Masuk</span>
-            </div>
-            <div class="p-6">
-                <p class="text-sm text-gray-500 mb-6">Input setoran tunai atau potongan gaji bulanan anggota di sini.</p>
-                <a href="{{ route('verifikator.simpanan.create') }}" class="block w-full text-center py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 font-bold hover:border-green-500 hover:text-green-600 hover:bg-green-50 transition-all">
-                    + Input Simpanan Baru
-                </a>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800">Verifikasi Pinjaman</h3>
-                <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold">Dana Keluar</span>
-            </div>
-            <div class="p-6">
-                <p class="text-sm text-gray-500 mb-6">Cek kelayakan pengajuan pinjaman dan cairkan dana.</p>
-                <button disabled class="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 font-bold hover:border-red-500 hover:text-red-600 transition-all cursor-not-allowed">
-                    Lihat Daftar Pengajuan (Coming Soon)
-                </button>
-            </div>
-        </div>
-
     </div>
 
     <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">

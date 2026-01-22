@@ -4,17 +4,21 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Models\User;
 use App\Models\Simpanan;
+use App\Mail\UndanganAktivasiAkun;
 
 class AdminController extends Controller
 {
     public function index()
     {
-        $totalAset    = Simpanan::sum('jumlah');
-        $totalAnggota = User::where('role', 'user')->where('status_akun', 'active')->count();
-        $users        = User::with('profile')->where('role', 'user')->latest()->take(5)->get();
+        $totalAset = Simpanan::sum('jumlah');
+        $totalAnggota = User::where('role', 'user')->where('status', 'active')->count();
+        $users = User::with('profile')->where('role', 'user')->latest()->take(5)->get();
 
         return view('admin.dashboard', compact('totalAnggota', 'totalAset', 'users'));
     }
@@ -46,31 +50,41 @@ class AdminController extends Controller
     public function storeUser(Request $request)
     {
         $request->validate([
-            'nama'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|min:6',
-            'role'     => 'required|in:admin,verifikator,user',
+            'email' => 'required|email|unique:users,email',
+            'role' => 'required|in:admin,verifikator,user',
         ]);
 
-        $user = User::create([
-            'email'       => $request->email,
-            'password'    => Hash::make($request->password),
-            'role'        => $request->role,
-            'status_akun' => 'active',
-        ]);
+        DB::beginTransaction();
 
-        $user->profile()->create([
-            'nama_lengkap'   => $request->nama,
-            'nik'            => time(),
-            'unit_kerja'     => '-',
-            'no_hp'          => '-',
-            'alamat'         => '-',
-            'jenis_kelamin'  => 'L',
-            'nama_bank'      => '-',
-            'nomor_rekening' => '-',
-        ]);
+        try {
+            $token = Str::random(60);
+            
+            $user = User::create([
+                'email' => $request->email,
+                'role' => $request->role,
+                'password' => Hash::make(Str::random(32)),
+                'status' => 'active',
+                'status_akun' => 'new',
+                'activation_token' => $token,
+            ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'Pengguna berhasil ditambahkan!');
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menyimpan data ke database. Silakan coba lagi.');
+        }
+
+        try {
+            Mail::to($user->email)->send(new UndanganAktivasiAkun($user));
+
+            return redirect()->route('admin.users.index')
+                ->with('success', 'Undangan aktivasi berhasil dikirim ke email pengguna.');
+
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users.index')
+                ->with('warning', 'Pengguna berhasil dibuat, namun email undangan gagal terkirim. Pesan Error: ' . $e->getMessage());
+        }
     }
 
     public function editUser($id)
@@ -84,54 +98,78 @@ class AdminController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'email'         => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'role'          => 'required|in:admin,verifikator,user',
-            'password'      => 'nullable|min:6',
-            'nama'          => 'required|string|max:255',
-            'nik'           => 'required|numeric',
-            'jenis_kelamin' => 'required|in:L,P',
-            'unit_kerja'    => 'required|string',
-            'no_hp'         => 'required|string',
-            'alamat'        => 'required|string',
-            'nama_bank'     => 'nullable|string',
-            'no_rekening'   => 'nullable|string',
+            'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'role' => 'required|in:admin,verifikator,user',
+            'status' => 'required|in:active,pending,inactive',
+            'password' => 'nullable|min:8',
+            'nama_lengkap' => 'nullable|string|max:255',
+            'nik' => 'nullable|numeric',
+            'unit_kerja' => 'nullable|string',
+            'no_hp' => 'nullable|string',
+            'alamat' => 'nullable|string',
         ]);
 
-        $userData = [
-            'email' => $request->email,
-            'role'  => $request->role,
-        ];
+        DB::beginTransaction();
 
-        if ($request->filled('password')) {
-            $userData['password'] = Hash::make($request->password);
+        try {
+            $userData = [
+                'email' => $request->email,
+                'role' => $request->role,
+                'status' => $request->status,
+            ];
+
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make($request->password);
+            }
+
+            $user->update($userData);
+
+            if ($user->profile) {
+                $user->profile()->update([
+                    'nama_lengkap' => $request->nama_lengkap,
+                    'nik' => $request->nik,
+                    'unit_kerja' => $request->unit_kerja,
+                    'no_hp' => $request->no_hp,
+                    'alamat' => $request->alamat,
+                ]);
+            } else {
+                $user->profile()->create([
+                    'nama_lengkap' => $request->nama_lengkap,
+                    'nik' => $request->nik,
+                    'unit_kerja' => $request->unit_kerja,
+                    'no_hp' => $request->no_hp,
+                    'alamat' => $request->alamat,
+                    'jenis_kelamin' => 'L',
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.users.index')->with('success', 'Data pengguna berhasil diperbarui!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan saat menyimpan data ke database.');
         }
-
-        $user->update($userData);
-
-        $user->profile()->update([
-            'nama_lengkap'   => $request->nama,
-            'nik'            => $request->nik,
-            'jenis_kelamin'  => $request->jenis_kelamin,
-            'unit_kerja'     => $request->unit_kerja,
-            'no_hp'          => $request->no_hp,
-            'alamat'         => $request->alamat,
-            'nama_bank'      => $request->nama_bank,
-            'nomor_rekening' => $request->no_rekening,
-        ]);
-
-        return redirect()->route('admin.users.index')->with('success', 'Data profil pengguna berhasil diperbarui!');
     }
 
     public function destroyUser($id)
     {
         $user = User::findOrFail($id);
-        
-        if ($user->id == auth()->id()) {
-            return back()->with('error', 'Tidak bisa menghapus akun sendiri!');
+
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Anda tidak dapat menghapus akun sendiri.');
         }
-        
-        $user->delete();
-        
-        return back()->with('success', 'User berhasil dihapus.');
+
+        DB::beginTransaction();
+
+        try {
+            $user->delete();
+            DB::commit();
+            return back()->with('success', 'Pengguna berhasil dihapus.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menghapus pengguna karena data terkait masih ada.');
+        }
     }
 }

@@ -9,7 +9,17 @@ class Profile extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'user_id',
+        'nama_lengkap',
+        'nik',
+        'jenis_kelamin',
+        'unit_kerja',
+        'no_hp',
+        'alamat',
+        'nama_bank',
+        'nomor_rekening',
+    ];
 
     public function user()
     {

@@ -1,24 +1,11 @@
 <x-app-layout title="Pinjaman">
 
-    {{-- NOTIFIKASI SUKSES (Muncul setelah ajukan pinjaman) --}}
-    @if (session('success'))
-        <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
-             class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm">
-            <i class="ph-fill ph-check-circle text-xl"></i>
-            <div>
-                <p class="text-sm font-bold">Berhasil!</p>
-                <p class="text-xs">{{ session('success') }}</p>
-            </div>
-        </div>
-    @endif
-
     <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Data Pinjaman</h1>
             <p class="text-sm text-gray-500">Daftar pengajuan dan status pinjaman Anda.</p>
         </div>
         
-        {{-- TOMBOL AJUKAN (Sudah Aktif) --}}
         <a href="{{ route('pinjaman.create') }}" 
            class="bg-red-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-red-800 transition-transform active:scale-95 flex items-center gap-2">
             <i class="ph-bold ph-plus"></i>
@@ -57,9 +44,14 @@
                                         <i class="ph-fill ph-clock"></i> Menunggu
                                     </span>
                                 @elseif($item->status == 'approved')
-                                    <span class="px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-200 inline-flex items-center gap-1">
-                                        <i class="ph-fill ph-check-circle"></i> Disetujui
-                                    </span>
+                                    <div class="flex flex-col items-center gap-2">
+                                        <span class="px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-200 inline-flex items-center gap-1">
+                                            <i class="ph-fill ph-check-circle"></i> Disetujui
+                                        </span>
+                                        <a href="{{ route('pinjaman.download', $item->id) }}" target="_blank" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
+                                            <i class="ph-bold ph-download-simple"></i> Bukti Pencairan
+                                        </a>
+                                    </div>
                                 @elseif($item->status == 'rejected')
                                     <span class="px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200 inline-flex items-center gap-1">
                                         <i class="ph-fill ph-x-circle"></i> Ditolak

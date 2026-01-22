@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Koperasi' }} - DKK Semarang</title>
+    <title>{{ $title ?? 'Koperasi' }} - Koperasi DKK Semarang</title>
 
     <link rel="shortcut icon" href="{{ asset('images/logo-dinkes.png') }}" type="image/png">
 
@@ -53,6 +53,10 @@
                     <a href="{{ route('verifikator.simpanan.create') }}" 
                        class="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('verifikator.simpanan.*') ? 'bg-red-50 text-red-700 border-l-4 border-red-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                         <i class="ph ph-money text-lg"></i> Input Simpanan
+                    </a>
+                    <a href="{{ route('verifikator.pinjaman.index') }}" 
+                       class="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('verifikator.pinjaman.*') ? 'bg-red-50 text-red-700 border-l-4 border-red-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                        <i class="ph ph-file-text text-lg"></i> Ajuan Pinjaman
                     </a>
 
                 @else

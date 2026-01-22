@@ -5,19 +5,23 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\Profile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
-    public function showSetupForm() {
+    public function showSetupForm()
+    {
         return view('user.setup_profile');
     }
 
-    public function storeSetup(Request $request) {
+    public function storeSetup(Request $request)
+    {
         $user = Auth::user();
+        $isUser = $user->role === 'user';
 
-        $request->validate([
+        $rules = [
             'nama_lengkap'   => 'required|string|max:255',
             'nik'            => [
                 'required', 
@@ -29,39 +33,65 @@ class ProfileController extends Controller
             'unit_kerja'     => 'required|string|max:100',
             'no_hp'          => 'required|numeric',
             'alamat'         => 'required|string',
-            'nama_bank'      => 'required|string',
-            'nomor_rekening' => 'required|string',
-        ], [
-            'nik.unique' => 'NIK ini sudah terdaftar di sistem.',
-            'nik.digits' => 'NIK harus 16 digit.',
-        ]);
+            'password'       => $user->status_akun === 'new' ? ['required', 'confirmed', Password::defaults()] : 'nullable',
+        ];
 
-        DB::transaction(function() use ($request, $user) {
-            
+        if ($isUser) {
+            $rules['nama_bank'] = 'required|string';
+            $rules['nomor_rekening'] = 'required|string';
+        }
+
+        $request->validate($rules);
+
+        DB::beginTransaction();
+
+        try {
+            $profileData = [
+                'nama_lengkap'   => $request->nama_lengkap,
+                'nik'            => $request->nik,
+                'jenis_kelamin'  => $request->jenis_kelamin,
+                'unit_kerja'     => $request->unit_kerja,
+                'no_hp'          => $request->no_hp,
+                'alamat'         => $request->alamat,
+            ];
+
+            if ($isUser) {
+                $profileData['nama_bank'] = $request->nama_bank;
+                $profileData['nomor_rekening'] = $request->nomor_rekening;
+            }
+
             $user->profile()->updateOrCreate(
                 ['user_id' => $user->id],
-                [
-                    'nama_lengkap'   => $request->nama_lengkap,
-                    'nik'            => $request->nik,
-                    'jenis_kelamin'  => $request->jenis_kelamin,
-                    'unit_kerja'     => $request->unit_kerja,
-                    'no_hp'          => $request->no_hp,
-                    'alamat'         => $request->alamat,
-                    'nama_bank'      => $request->nama_bank,
-                    'nomor_rekening' => $request->nomor_rekening,
-                ]
+                $profileData
             );
 
-            $user->update(['status_akun' => 'active']);
-        });
+            if ($user->status_akun === 'new') {
+                $user->update([
+                    'password' => Hash::make($request->password),
+                    'status_akun' => 'active',
+                    'activation_token' => null,
+                    'email_verified_at' => now(),
+                ]);
+            }
 
-        return redirect()->route('dashboard')->with('success', 'Akun berhasil diaktifkan! Selamat datang.');
+            DB::commit();
+
+            if ($user->role === 'verifikator') {
+                return redirect()->route('verifikator.dashboard')->with('success', 'Profil verifikator berhasil disimpan.');
+            }
+
+            return redirect()->route('dashboard')->with('success', 'Profil berhasil disimpan dan akun telah aktif.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menyimpan data. Silakan coba lagi.');
+        }
     }
 
     public function edit()
     {
         $user = Auth::user();
-        $profile = $user->profile; 
+        $profile = $user->profile;
 
         return view('user.settings', compact('user', 'profile'));
     }
@@ -72,22 +102,33 @@ class ProfileController extends Controller
         $profile = $user->profile;
 
         $request->validate([
-            'no_hp'   => 'required|numeric',
-            'alamat'  => 'required|string|max:500',
-            'password'=> 'nullable|string|min:6|confirmed',
+            'no_hp'            => 'required|numeric',
+            'alamat'           => 'required|string|max:500',
+            'current_password' => 'nullable|required_with:password|current_password',
+            'password'         => ['nullable', 'confirmed', Password::defaults()],
         ]);
 
-        $profile->update([
-            'no_hp'  => $request->no_hp,
-            'alamat' => $request->alamat,
-        ]);
+        DB::beginTransaction();
 
-        if ($request->filled('password')) {
-            $user->update([
-                'password' => bcrypt($request->password)
+        try {
+            $profile->update([
+                'no_hp'  => $request->no_hp,
+                'alamat' => $request->alamat,
             ]);
-        }
 
-        return back()->with('success', 'Profil berhasil diperbarui!');
+            if ($request->filled('password')) {
+                $user->update([
+                    'password' => Hash::make($request->password)
+                ]);
+            }
+
+            DB::commit();
+
+            return back()->with('success', 'Pengaturan akun berhasil diperbarui.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memperbarui profil.');
+        }
     }
 }

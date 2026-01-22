@@ -32,15 +32,17 @@
             <i class="ph-fill ph-warning-circle text-red-600 text-xl mt-0.5"></i>
             <div>
                 <p class="text-sm text-red-800 font-bold">Gagal Masuk</p>
-                <p class="text-xs text-red-700 mt-1">
-                    Email atau password yang Anda masukkan salah.
-                </p>
+                <ul class="text-xs text-red-700 mt-1 list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
             </div>
         </div>
     @endif
 
     {{-- FORM LOGIN --}}
-    <form class="space-y-5" action="{{ route('login.post') }}" method="POST" novalidate>
+    <form class="space-y-6" action="{{ route('login.post') }}" method="POST" novalidate>
         @csrf
 
         {{-- INPUT EMAIL --}}
@@ -51,7 +53,7 @@
                     <i class="ph ph-envelope-simple text-gray-500 text-xl group-focus-within:text-red-700 transition-colors"></i>
                 </div>
 
-                {{-- Input Field (Border Dark Gray) --}}
+                {{-- Input Field --}}
                 <input
                     id="email"
                     name="email"
@@ -59,8 +61,8 @@
                     autocomplete="email"
                     required
                     value="{{ old('email') }}"
-                    placeholder="Email"
-                    class="block w-full rounded-xl border-gray-500 py-3.5 pl-12 pr-4 text-gray-900 placeholder:text-gray-400 
+                    placeholder="Email Dinas"
+                    class="block w-full rounded-xl border-gray-300 py-3.5 pl-12 pr-4 text-gray-900 placeholder:text-gray-400 
                            shadow-sm focus:border-red-600 focus:ring-red-600 sm:text-sm transition-all font-medium"
                 >
             </div>
@@ -85,7 +87,7 @@
                     autocomplete="current-password"
                     required
                     placeholder="Kata Sandi"
-                    class="block w-full rounded-xl border-gray-500 py-3.5 pl-12 pr-12 text-gray-900 placeholder:text-gray-400 
+                    class="block w-full rounded-xl border-gray-300 py-3.5 pl-12 pr-12 text-gray-900 placeholder:text-gray-400 
                            shadow-sm focus:border-red-600 focus:ring-red-600 sm:text-sm transition-all font-medium"
                 >
 
@@ -104,49 +106,33 @@
             @enderror
         </div>
 
-        {{-- REMEMBER ME & FORGOT PASSWORD --}}
-        <div class="flex items-center justify-between px-1">
-            <div class="flex items-center">
-                <input
-                    id="remember-me"
-                    name="remember"
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-gray-400 text-red-700 focus:ring-red-600 cursor-pointer"
-                    {{ old('remember') ? 'checked' : '' }}
-                >
-                <label for="remember-me" class="ml-2 block text-sm text-gray-600 cursor-pointer select-none font-medium">
-                    Ingat saya
-                </label>
-            </div>
-
-            <div class="text-sm">
-                <a href="#" class="font-bold text-red-700 hover:text-red-800 hover:underline">
-                    Lupa Sandi?
-                </a>
-            </div>
-        </div>
-
         {{-- TOMBOL SUBMIT (Merah Solid) --}}
-        <div>
-            <button
-                type="submit"
-                class="w-full flex justify-center items-center gap-2 py-3.5 px-4 rounded-xl shadow-md 
-                       text-sm font-bold text-white bg-red-700 hover:bg-red-800 
-                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 
-                       transition-transform active:scale-[0.98]"
-            >
-                MASUK APLIKASI
-                <i class="ph-bold ph-arrow-right"></i>
-            </button>
+        <button
+            type="submit"
+            class="w-full flex justify-center items-center gap-2 py-3.5 px-4 rounded-xl shadow-md 
+                   text-sm font-bold text-white bg-red-700 hover:bg-red-800 
+                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 
+                   transition-transform active:scale-[0.98]"
+        >
+            MASUK APLIKASI
+            <i class="ph-bold ph-arrow-right"></i>
+        </button>
+
+        {{-- LUPA SANDI (Di bawah tombol, Rata Tengah) --}}
+        <div class="text-center">
+            <a href="#" class="text-sm font-bold text-red-700 hover:text-red-800 hover:underline transition-colors">
+                Lupa Sandi?
+            </a>
         </div>
 
-        {{-- Bantuan --}}
-        <div class="pt-4 text-center">
-            <p class="text-xs text-gray-400">
-                Kendala akses akun? Hubungi <span class="font-bold text-gray-700">Administrator IT</span>.
-            </p>
-        </div>
     </form>
+
+    {{-- Footer Bantuan & Copyright --}}
+    <div class="pt-6 text-center border-t border-gray-300 mt-8">
+        <p class="text-xs text-gray-400 leading-relaxed">
+            Kendala akses akun? Hubungi <span class="font-bold text-gray-700">Administrator IT</span>.
+        </p>
+    </div>
 
     {{-- Script Toggle Password --}}
     <script>
