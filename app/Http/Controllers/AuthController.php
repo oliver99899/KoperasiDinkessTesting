@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AuthController extends Controller
@@ -18,72 +19,84 @@ class AuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+            'nip' => ['required', 'string'],
+            'password' => ['required', 'string'],
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        $throttleKey = Str::transliterate(Str::lower($request->input('nip')) . '|' . $request->ip());
 
-            $user = Auth::user();
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
 
-            if ($user->status === 'inactive') {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-                
-                return back()->withErrors([
-                    'email' => 'Akun Anda dinonaktifkan. Silakan hubungi admin.',
-                ])->onlyInput('email');
-            }
-
-            if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard');
-            }
-
-            if ($user->status_akun === 'new' || !$user->profile) {
-                return redirect()->route('profile.setup');
-            }
-            
-            if ($user->role === 'verifikator') {
-                return redirect()->route('verifikator.dashboard');
-            }
-
-            return redirect()->route('dashboard');
+            return back()->withErrors([
+                'nip' => 'Terlalu banyak percobaan login. Silakan coba lagi dalam ' . $seconds . ' detik.',
+            ])->onlyInput('nip');
         }
 
-        return back()->withErrors([
-            'email' => 'Email atau password yang Anda masukkan salah.',
-        ])->onlyInput('email');
-    }
+        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+            RateLimiter::hit($throttleKey);
 
-    public function showActivationForm($token): RedirectResponse
-    {
-        if (Auth::check()) {
+            return back()->withErrors([
+                'nip' => 'Kombinasi NIP dan kata sandi tidak ditemukan dalam sistem.',
+            ])->onlyInput('nip');
+        }
+
+        RateLimiter::clear($throttleKey);
+
+        $request->session()->regenerate();
+
+        $user = $request->user();
+
+        if (in_array($user->status_akun, ['blocked', 'retired'], true)) {
             Auth::logout();
-            request()->session()->invalidate();
-            request()->session()->regenerateToken();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'nip' => 'Otoritas akses ditolak. Akun Anda dalam status: ' . strtoupper($user->status_akun) . '.',
+            ])->onlyInput('nip');
         }
 
-        $user = User::where('activation_token', $token)
-                    ->where('status_akun', 'new')
-                    ->first();
+        if (!in_array($user->status_akun, ['new', 'active'], true)) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Link aktivasi tidak valid atau akun sudah aktif. Silakan login manual.');
+            return back()->withErrors([
+                'nip' => 'Akun Anda belum dapat digunakan. Hubungi Admin.',
+            ])->onlyInput('nip');
         }
 
-        Auth::login($user);
-        request()->session()->regenerate();
+        $user->update([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+            'active_session_id' => $request->session()->getId(),
+        ]);
 
-        return redirect()->route('profile.setup');
+        if ($user->status_akun === 'new') {
+            return redirect()->route('profile.setup');
+        }
+
+        return redirect()->intended(route('dashboard'));
     }
 
     public function logout(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        if ($user) {
+            $user->update(['active_session_id' => null]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
+    }
+
+    public function showActivationForm($token): View
+    {
+        return view('auth.activation', ['token' => $token]);
     }
 }

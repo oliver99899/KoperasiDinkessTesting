@@ -12,11 +12,19 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+
+            'checkrole' => \App\Http\Middleware\CheckRole::class,
+
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
             'is_verifikator' => \App\Http\Middleware\IsVerifikator::class,
-            'check.profile' => \App\Http\Middleware\EnsureProfileFilled::class,
-            'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
+            'check.status' => \App\Http\Middleware\CheckAccountStatus::class,
+            'prevent.back' => \App\Http\Middleware\PreventBackHistory::class,
         ]);
+
+        $middleware->appendToGroup('web', \App\Http\Middleware\PreventBackHistory::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

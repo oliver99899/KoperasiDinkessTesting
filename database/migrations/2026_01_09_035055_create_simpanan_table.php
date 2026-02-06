@@ -10,18 +10,28 @@ return new class extends Migration
     {
         Schema::create('simpanan', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            
-            $table->enum('jenis_simpanan', ['pokok', 'wajib', 'sukarela']);
-            $table->decimal('jumlah', 15, 2); 
-            $table->date('tanggal_bayar');
-            
-            $table->string('metode_bayar')->default('potong_gaji'); 
-            
+
+            $table->foreignId('user_id')
+                ->constrained('users')
+                ->restrictOnDelete();
+
+            $table->char('periode', 7)->index();
+
+            $table->decimal('jumlah', 15, 2);
+            $table->date('tanggal_potong');
             $table->string('keterangan')->nullable();
-            
-            $table->string('status')->default('verified'); 
-            
+
+            $table->foreignId('created_by')
+                ->constrained('users')
+                ->restrictOnDelete();
+
+            $table->timestamp('verified_at')->nullable();
+
+            $table->char('signature', 64)->unique();
+
+            $table->unique(['user_id', 'periode']);
+
+            $table->softDeletes();
             $table->timestamps();
         });
     }

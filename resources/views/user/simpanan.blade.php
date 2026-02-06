@@ -1,112 +1,114 @@
 <x-app-layout title="Simpanan">
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        
-        <div class="md:col-span-3 bg-gradient-to-r from-red-700 to-red-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-            <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="mb-8">
+        <div class="bg-gradient-to-r from-red-700 to-red-600 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <p class="text-red-100 text-sm font-medium mb-1">Total Saldo Simpanan Anda</p>
-                    <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight">
+                    <p class="text-red-100 text-sm font-medium mb-2 uppercase tracking-wider">Total Saldo Simpanan (Iuran)</p>
+                    <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight">
                         Rp {{ number_format($totalSaldo, 0, ',', '.') }}
                     </h2>
-                    <p class="text-xs text-red-200 mt-2 bg-white/10 inline-block px-3 py-1 rounded-full">
-                        <i class="ph-fill ph-check-circle mr-1"></i> Data Terverifikasi Sistem
+                    <p class="text-sm text-red-200 mt-3 bg-white/10 inline-flex items-center px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                        <i class="ph-fill ph-check-circle mr-2"></i> Akumulasi Simpanan Terverifikasi
                     </p>
                 </div>
                 
-                <div class="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-                    <i class="ph-fill ph-wallet text-3xl text-white"></i>
+                <div class="hidden md:flex h-24 w-24 bg-white/20 rounded-full items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
+                    <i class="ph-fill ph-wallet text-5xl text-white drop-shadow-md"></i>
                 </div>
             </div>
 
-            <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl"></div>
+            <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
             <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-black opacity-10 rounded-full blur-3xl"></div>
-        </div>
-
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-center">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                    <i class="ph-fill ph-lock-key"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-500 uppercase">Simpanan Pokok</span>
-            </div>
-            <p class="text-xl font-extrabold text-gray-900">Rp {{ number_format($saldoPokok, 0, ',', '.') }}</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-center">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <i class="ph-fill ph-calendar-check"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-500 uppercase">Simpanan Wajib</span>
-            </div>
-            <p class="text-xl font-extrabold text-gray-900">Rp {{ number_format($saldoWajib, 0, ',', '.') }}</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-center">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
-                    <i class="ph-fill ph-piggy-bank"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-500 uppercase">Simpanan Sukarela</span>
-            </div>
-            <p class="text-xl font-extrabold text-gray-900">Rp {{ number_format($saldoSukarela, 0, ',', '.') }}</p>
         </div>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
-                <i class="ph-fill ph-clock-counter-clockwise text-gray-400"></i>
+        <div class="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+            <h3 class="font-bold text-gray-900 text-lg flex items-center gap-2">
+                <i class="ph-duotone ph-clock-counter-clockwise text-red-600 text-xl"></i>
                 Riwayat Transaksi
             </h3>
+
+            <form method="GET" action="{{ route('simpanan.index') }}" class="w-full sm:w-auto">
+                <div class="relative">
+                    <i class="ph-bold ph-calendar-blank absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                    <select name="tahun" onchange="this.form.submit()" 
+                            class="w-full sm:w-48 pl-10 pr-8 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-xl focus:ring-red-500 focus:border-red-500 shadow-sm cursor-pointer hover:border-red-300 transition-colors">
+                        @foreach($availableYears as $year)
+                            <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>
+                                {{ $year }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </form>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left">
-                <thead class="bg-gray-50 text-gray-500 border-b border-gray-100">
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="bg-white text-gray-900 font-bold uppercase text-xs border-b border-gray-200">
                     <tr>
                         <th class="px-6 py-4">Tanggal</th>
-                        <th class="px-6 py-4">Jenis</th>
                         <th class="px-6 py-4">Keterangan</th>
-                        <th class="px-6 py-4">Metode</th>
-                        <th class="px-6 py-4 text-right">Jumlah (Rp)</th>
+                        <th class="px-6 py-4">Metode Bayar</th>
+                        <th class="px-6 py-4 text-center">Status</th>
+                        <th class="px-6 py-4 text-right">Jumlah Masuk</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($riwayatSimpanan as $item)
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                                {{ $item->tanggal_bayar->format('d M Y') }}
+                                {{ \Carbon\Carbon::parse($item->tanggal_bayar)->translatedFormat('d F Y') }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="capitalize px-2.5 py-1 rounded-md text-xs font-bold border 
-                                    {{ $item->jenis_simpanan == 'wajib' ? 'bg-blue-50 text-blue-700 border-blue-100' : 
-                                      ($item->jenis_simpanan == 'pokok' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-green-50 text-green-700 border-green-100') }}">
-                                    {{ ucfirst($item->jenis_simpanan) }}
+                            <td class="px-6 py-4 italic">
+                                {{ $item->keterangan ?? 'Iuran Bulanan' }}
+                            </td>
+                            <td class="px-6 py-4 capitalize">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-gray-100 border border-gray-200 text-gray-600">
+                                    @if($item->metode_bayar == 'potong_gaji')
+                                        <i class="ph-bold ph-scissors"></i>
+                                    @elseif($item->metode_bayar == 'transfer')
+                                        <i class="ph-bold ph-bank"></i>
+                                    @else
+                                        <i class="ph-bold ph-money"></i>
+                                    @endif
+                                    {{ str_replace('_', ' ', $item->metode_bayar) }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-gray-500 italic">
-                                {{ $item->keterangan ?? '-' }}
-                            </td>
-                            <td class="px-6 py-4 text-gray-500 capitalize">
-                                {{ str_replace('_', ' ', $item->metode_bayar) }}
+                            <td class="px-6 py-4 text-center">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                                    <i class="ph-fill ph-check-circle"></i> Terverifikasi
+                                </span>
                             </td>
                             <td class="px-6 py-4 text-right font-bold text-gray-900">
-                                + {{ number_format($item->jumlah, 0, ',', '.') }}
+                                + Rp {{ number_format($item->jumlah, 0, ',', '.') }}
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">
-                                <div class="flex flex-col items-center gap-2">
-                                    <i class="ph-duotone ph-receipt text-4xl text-gray-300"></i>
-                                    <span>Belum ada riwayat simpanan.</span>
+                            <td colspan="5" class="px-6 py-16 text-center text-gray-400 italic">
+                                <div class="flex flex-col items-center gap-3">
+                                    <div class="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center">
+                                        <i class="ph-duotone ph-receipt text-3xl text-gray-300"></i>
+                                    </div>
+                                    <p>Tidak ada data simpanan untuk tahun {{ $selectedYear }}.</p>
                                 </div>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
+                @if($riwayatSimpanan->count() > 0)
+                <tfoot class="bg-gray-50 font-bold text-gray-900">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-right uppercase text-xs tracking-wider">Total Masuk ({{ $selectedYear }})</td>
+                        <td class="px-6 py-4 text-right text-red-700">
+                            Rp {{ number_format($riwayatSimpanan->sum('jumlah'), 0, ',', '.') }}
+                        </td>
+                    </tr>
+                </tfoot>
+                @endif
             </table>
         </div>
     </div>

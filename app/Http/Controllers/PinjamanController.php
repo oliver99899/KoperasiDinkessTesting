@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pinjaman;
+use App\Models\Simpanan;
+use App\Support\HmacSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Pinjaman;
+use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -12,72 +15,129 @@ class PinjamanController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
-
-        $pinjaman = Pinjaman::where('user_id', $user->id)
-                            ->orderBy('created_at', 'desc')
-                            ->get();
+        $pinjaman = Pinjaman::where('user_id', Auth::id())
+            ->orderByDesc('created_at')
+            ->paginate(10);
 
         return view('user.pinjaman', compact('pinjaman'));
     }
 
     public function create()
     {
-        return view('user.pinjaman_create');
+        $hasPending = Pinjaman::where('user_id', Auth::id())
+            ->whereIn('status', ['diajukan', 'verifikasi'])
+            ->exists();
+
+        if ($hasPending) {
+            return redirect()->route('pinjaman.index')->with('error', 'Anda masih memiliki pengajuan yang sedang diproses.');
+        }
+
+        $totalSimpanan = Simpanan::where('user_id', Auth::id())
+            ->whereNotNull('verified_at')
+            ->sum('jumlah');
+
+        return view('user.pinjaman_create', compact('totalSimpanan'));
+    }
+
+    public function destroy($id)
+    {
+        $pinjaman = Pinjaman::where('user_id', Auth::id())
+                            ->where('status', 'diajukan') 
+                            ->findOrFail($id);
+
+        $pinjaman->forceDelete(); 
+
+        return back()->with('success', 'Pengajuan pinjaman berhasil dibatalkan dan dihapus.');
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'jumlah_pengajuan' => 'required|numeric|min:500000|max:10000000',
-            'durasi_bulan'     => 'required|numeric|min:3|max:36',
-            'alasan'           => 'required|string|max:255',
+            'jumlah_pengajuan' => 'required|numeric|min:500000|max:50000000',
+            'durasi_bulan' => 'required|integer|in:3,6,12,24',
+            'alasan_pengajuan' => 'required|string|max:1000',
+            'dokumen_pendukung' => 'nullable|array',
+            'dokumen_pendukung.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        Pinjaman::create([
-            'user_id'           => Auth::id(),
-            'jumlah_pengajuan'  => $request->jumlah_pengajuan,
-            'durasi_bulan'      => $request->durasi_bulan,
-            'alasan'            => $request->alasan,
-            'status'            => 'pending',
-            'sisa_tagihan'      => 0,
-            'tanggal_pengajuan' => now(),
-        ]);
+        return DB::transaction(function () use ($request) {
+            $hasPending = Pinjaman::where('user_id', Auth::id())
+                ->whereIn('status', ['diajukan', 'verifikasi'])
+                ->lockForUpdate()
+                ->exists();
 
-        return redirect()->route('pinjaman.index')->with('success', 'Pengajuan berhasil dikirim! Menunggu persetujuan Admin.');
+            if ($hasPending) {
+                return redirect()->route('pinjaman.index')->with('error', 'Gagal: Pengajuan ganda tidak diizinkan.');
+            }
+
+            $dokumenPaths = [];
+            if ($request->hasFile('dokumen_pendukung')) {
+                foreach ($request->file('dokumen_pendukung') as $file) {
+                    $path = $file->store('dokumen_pinjaman', 'public');
+                    $dokumenPaths[] = $path;
+                }
+            }
+
+            $year = date('Y');
+            $count = Pinjaman::whereYear('tanggal_pengajuan', $year)->count() + 1;
+            $nomorPinjaman = 'PJ-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+            Pinjaman::create([
+                'user_id' => Auth::id(),
+                'nomor_pinjaman' => $nomorPinjaman,
+                'jumlah_pengajuan' => $request->jumlah_pengajuan,
+                'durasi_bulan' => $request->durasi_bulan,
+                'bunga_persen' => 1.00,
+                'alasan_pengajuan' => $request->alasan_pengajuan,
+                'status' => 'diajukan',
+                'sisa_pinjaman' => 0,
+                'tanggal_pengajuan' => now(),
+                'dokumen_syarat' => $dokumenPaths,
+            ]);
+
+            return redirect()->route('pinjaman.index')->with('success', 'Pengajuan pinjaman berhasil dikirim.');
+        });
     }
 
     public function downloadBukti($id)
     {
-        $pinjaman = Pinjaman::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
+        $pinjaman = Pinjaman::with(['user.profile', 'decider.profile'])
+            ->where('id', $id)
+            ->where('user_id', Auth::id())
+            ->where('status', 'dicairkan')
+            ->firstOrFail();
 
-        if ($pinjaman->status != 'approved') {
-            return back()->withErrors(['msg' => 'Bukti hanya tersedia untuk pinjaman yang disetujui.']);
-        }
+        $payload = HmacSigner::normalize([$pinjaman->id, $pinjaman->nomor_pinjaman]);
+        $signature = HmacSigner::sign($payload);
 
-        $hash = base64_encode($pinjaman->id . '-' . 'koperasi-secure'); 
-        $urlTujuan = route('verifikasi.pinjaman', ['hash' => $hash]);
+        $urlTujuan = route('verifikasi.pinjaman', [
+            'hash' => base64_encode($pinjaman->id . '|' . $signature)
+        ]);
 
-        $qrcode = base64_encode(QrCode::format('svg')->size(150)->errorCorrection('H')->generate($urlTujuan));
+        $qrcode = base64_encode(QrCode::format('svg')->size(120)->errorCorrection('M')->generate($urlTujuan));
 
         $pdf = Pdf::loadView('pdf.bukti_pencairan', compact('pinjaman', 'qrcode'));
-        
-        return $pdf->download('Bukti-Pencairan-Pinjaman-DKK.pdf');
+        return $pdf->download('Bukti-Pinjaman-' . $pinjaman->nomor_pinjaman . '.pdf');
     }
 
     public function verifikasiQr($hash)
     {
         try {
-            $decoded = base64_decode($hash);
-            $parts = explode('-', $decoded);
-            $id = $parts[0];
+            $decoded = explode('|', base64_decode($hash));
+            if (count($decoded) !== 2) abort(403, 'Hash tidak valid.');
 
-            $pinjaman = Pinjaman::with('user.profile')->findOrFail($id);
+            [$id, $token] = $decoded;
+            $pinjaman = Pinjaman::with(['user.profile', 'decider.profile'])->findOrFail($id);
+            
+            $payload = HmacSigner::normalize([$pinjaman->id, $pinjaman->nomor_pinjaman]);
+            
+            if (!HmacSigner::verify($payload, $token)) {
+                abort(403, 'Tanda tangan digital QR Code tidak valid atau data telah dimanipulasi.');
+            }
 
             return view('general.verifikasi_pinjaman', compact('pinjaman'));
-
         } catch (\Exception $e) {
-            abort(404, 'Data tidak ditemukan atau QR Code tidak valid.');
+            abort(404, 'Data verifikasi tidak ditemukan.');
         }
     }
 }

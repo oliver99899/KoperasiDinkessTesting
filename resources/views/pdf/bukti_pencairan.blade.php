@@ -91,7 +91,7 @@
         <thead>
             <tr>
                 <th>Nama</th>
-                <th>NIK</th>
+                <th>NIP</th>
                 <th>Unit Kerja</th>
                 <th>Nominal Disetujui</th>
                 <th>Tenor</th>
@@ -99,9 +99,9 @@
         </thead>
         <tbody>
             <tr>
-                <td>{{ $pinjaman->user->profile->nama_lengkap ?? 'Anggota Koperasi' }}</td>
-                <td>{{ $pinjaman->user->profile->nik ?? '-' }}</td>
-                <td>{{ $pinjaman->user->profile->unit_kerja ?? 'Dinas Kesehatan' }}</td>
+                <td>{{ $pinjaman->user->name ?? 'Anggota Koperasi' }}</td>
+                <td>{{ $pinjaman->user->nip ?? '-' }}</td>
+                <td>{{ $pinjaman->user->unit_kerja ?? 'Dinas Kesehatan Kota Semarang' }}</td>
                 <td style="font-weight: bold;">Rp {{ number_format($pinjaman->jumlah_pengajuan, 0, ',', '.') }}</td>
                 <td>{{ $pinjaman->durasi_bulan }} Bulan</td>
             </tr>

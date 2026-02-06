@@ -2,120 +2,151 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use App\Models\UnitKerja;
 use App\Models\User;
-use App\Models\Simpanan;
-use App\Mail\UndanganAktivasiAkun;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class AdminController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $totalAset = Simpanan::sum('jumlah');
-        $totalAnggota = User::where('role', 'user')->where('status', 'active')->count();
-        $users = User::with('profile')->where('role', 'user')->latest()->take(5)->get();
+        $totalUser = User::count();
+        $userActive = User::where('status_akun', 'active')->count();
+        $userNew = User::where('status_akun', 'new')->count();
 
-        return view('admin.dashboard', compact('totalAnggota', 'totalAset', 'users'));
+        $users = User::with(['profile.unitKerja', 'roles'])
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($u) {
+                $u->role = $u->roles->pluck('name')->contains('admin')
+                    ? 'admin'
+                    : ($u->roles->pluck('name')->contains('verifikator') ? 'verifikator' : 'anggota');
+                return $u;
+            });
+
+        $unitKerja = UnitKerja::orderBy('nama_unit', 'asc')->get();
+
+        return view('admin.dashboard', compact('totalUser', 'userActive', 'userNew', 'users', 'unitKerja'));
     }
 
     public function users(Request $request)
     {
-        $query = User::with('profile')->where('role', '!=', 'admin');
+        $query = User::with(['profile.unitKerja', 'roles']);
 
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('email', 'like', "%{$search}%")
-                  ->orWhereHas('profile', function($p) use ($search) {
-                      $p->where('nama_lengkap', 'like', "%{$search}%")
-                        ->orWhere('nik', 'like', "%{$search}%");
-                  });
+        $unitKerja = UnitKerja::orderBy('nama_unit', 'asc')->get();
+
+        if ($request->filled('search')) {
+            $search = (string) $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%")
+                    ->orWhereHas('profile', function ($p) use ($search) {
+                        $p->where('nama_lengkap', 'like', "%{$search}%")
+                            ->orWhere('nik', 'like', "%{$search}%");
+                    });
             });
         }
 
-        $users = $query->latest()->paginate(10);
-        return view('admin.users.index', compact('users'));
-    }
+        if ($request->filled('role')) {
+            $query->role($request->role);
+        }
 
-    public function createUser()
-    {
-        return view('admin.users.create');
+        if ($request->filled('status_akun')) {
+            $query->where('status_akun', $request->status_akun);
+        }
+
+        if ($request->filled('unit_kerja_id')) {
+            $query->whereHas('profile', function ($q) use ($request) {
+                $q->where('unit_kerja_id', $request->unit_kerja_id);
+            });
+        }
+
+        $users = $query->latest()->paginate(15)->withQueryString();
+
+        $users->getCollection()->transform(function ($u) {
+            $u->role = $u->roles->pluck('name')->contains('admin')
+                ? 'admin'
+                : ($u->roles->pluck('name')->contains('verifikator') ? 'verifikator' : 'anggota');
+            return $u;
+        });
+
+        return view('admin.users.index', compact('users', 'unitKerja'));
     }
 
     public function storeUser(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|unique:users,email',
-            'role' => 'required|in:admin,verifikator,user',
+            'nip' => ['required', 'numeric', 'unique:users,nip', 'digits_between:8,20'],
+            'role' => ['required', 'in:admin,verifikator,anggota'],
+            'unit_kerja_id' => ['required', 'exists:unit_kerja,id'],
+            'password' => ['required', Password::defaults()],
         ]);
 
         DB::beginTransaction();
 
         try {
-            $token = Str::random(60);
-            
             $user = User::create([
-                'email' => $request->email,
-                'role' => $request->role,
-                'password' => Hash::make(Str::random(32)),
-                'status' => 'active',
+                'name' => 'Menunggu Aktivasi',
+                'nip' => $request->nip,
+                'password' => Hash::make($request->password),
                 'status_akun' => 'new',
-                'activation_token' => $token,
+            ]);
+
+            if ($request->role === 'admin') {
+                $user->assignRole(['anggota', 'admin']);
+            } elseif ($request->role === 'verifikator') {
+                $user->assignRole(['anggota', 'verifikator']);
+            } else {
+                $user->assignRole(['anggota']);
+            }
+
+            $user->profile()->create([
+                'nama_lengkap' => 'Menunggu Aktivasi',
+                'unit_kerja_id' => $request->unit_kerja_id,
+                'activated_at' => null,
             ]);
 
             DB::commit();
 
+            return redirect()->back()->with('success', 'Akun berhasil didaftarkan. Instruksikan pengguna untuk melakukan aktivasi profil.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal menyimpan data ke database. Silakan coba lagi.');
+            Log::error('USER_STORE_FAILED: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Terjadi kesalahan sistem saat menyimpan data.')->withInput();
         }
-
-        try {
-            Mail::to($user->email)->send(new UndanganAktivasiAkun($user));
-
-            return redirect()->route('admin.users.index')
-                ->with('success', 'Undangan aktivasi berhasil dikirim ke email pengguna.');
-
-        } catch (\Exception $e) {
-            return redirect()->route('admin.users.index')
-                ->with('warning', 'Pengguna berhasil dibuat, namun email undangan gagal terkirim. Pesan Error: ' . $e->getMessage());
-        }
-    }
-
-    public function editUser($id)
-    {
-        $user = User::with('profile')->findOrFail($id);
-        return view('admin.users.edit', compact('user'));
     }
 
     public function updateUser(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        $user = User::with('profile')->findOrFail($id);
 
         $request->validate([
-            'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'role' => 'required|in:admin,verifikator,user',
-            'status' => 'required|in:active,pending,inactive',
-            'password' => 'nullable|min:8',
-            'nama_lengkap' => 'nullable|string|max:255',
-            'nik' => 'nullable|numeric',
-            'unit_kerja' => 'nullable|string',
-            'no_hp' => 'nullable|string',
-            'alamat' => 'nullable|string',
+            'nama_lengkap' => ['required', 'string', 'max:255'],
+            'nip' => ['required', 'numeric', Rule::unique('users', 'nip')->ignore($user->id)],
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'role' => ['required', 'in:admin,verifikator,anggota'],
+            'status_akun' => ['required', 'in:active,new,retired,blocked'],
+            'unit_kerja_id' => ['required', 'exists:unit_kerja,id'],
+            'password' => ['nullable', 'confirmed', Password::min(8)], 
         ]);
 
         DB::beginTransaction();
 
         try {
             $userData = [
+                'name' => $request->nama_lengkap,
+                'nip' => $request->nip,
+                'status_akun' => $request->status_akun,
                 'email' => $request->email,
-                'role' => $request->role,
-                'status' => $request->status,
             ];
 
             if ($request->filled('password')) {
@@ -124,32 +155,27 @@ class AdminController extends Controller
 
             $user->update($userData);
 
-            if ($user->profile) {
-                $user->profile()->update([
-                    'nama_lengkap' => $request->nama_lengkap,
-                    'nik' => $request->nik,
-                    'unit_kerja' => $request->unit_kerja,
-                    'no_hp' => $request->no_hp,
-                    'alamat' => $request->alamat,
-                ]);
+            if ($request->role === 'admin') {
+                $user->syncRoles(['anggota', 'admin']);
+            } elseif ($request->role === 'verifikator') {
+                $user->syncRoles(['anggota', 'verifikator']);
             } else {
-                $user->profile()->create([
-                    'nama_lengkap' => $request->nama_lengkap,
-                    'nik' => $request->nik,
-                    'unit_kerja' => $request->unit_kerja,
-                    'no_hp' => $request->no_hp,
-                    'alamat' => $request->alamat,
-                    'jenis_kelamin' => 'L',
-                ]);
+                $user->syncRoles(['anggota']);
             }
+
+            $user->profile()->update([
+                'nama_lengkap' => $request->nama_lengkap,
+                'unit_kerja_id' => $request->unit_kerja_id,
+            ]);
 
             DB::commit();
 
-            return redirect()->route('admin.users.index')->with('success', 'Data pengguna berhasil diperbarui!');
-
+            return redirect()->back()->with('success', 'Data profil dan akses pengguna berhasil diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan saat menyimpan data ke database.');
+            Log::error('USER_UPDATE_FAILED: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal memperbarui data pengguna.');
         }
     }
 
@@ -158,18 +184,79 @@ class AdminController extends Controller
         $user = User::findOrFail($id);
 
         if ($user->id === auth()->id()) {
-            return back()->with('error', 'Anda tidak dapat menghapus akun sendiri.');
+            return back()->with('error', 'Prosedur keamanan: Anda tidak dapat menghapus akun Anda sendiri.');
         }
 
         DB::beginTransaction();
 
         try {
+            if ($user->profile) {
+                $user->profile()->delete();
+            }
+
             $user->delete();
+
             DB::commit();
-            return back()->with('success', 'Pengguna berhasil dihapus.');
+
+            return back()->with('success', 'Seluruh data pengguna telah dipindahkan ke arsip (Soft Delete).');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal menghapus pengguna karena data terkait masih ada.');
+            Log::error('USER_DELETE_FAILED: ' . $e->getMessage());
+
+            return back()->with('error', 'Gagal memproses penghapusan pengguna.');
         }
+    }
+
+    public function impersonate($id)
+    {
+        $targetUser = User::findOrFail($id);
+        $originalAdmin = Auth::user();
+
+        if ($targetUser->id === $originalAdmin->id) {
+            return back()->with('error', 'Anda sudah berada di akun ini.');
+        }
+
+        if ($targetUser->hasRole('admin')) {
+            return back()->with('error', 'Akses ditolak: Fitur impersonasi tidak diizinkan antar sesama Administrator.');
+        }
+
+        Log::critical('SECURITY_AUDIT: Admin ID ' . $originalAdmin->id . ' menginisiasi Impersonasi ke User ID ' . $targetUser->id . ' pada ' . now());
+
+        session()->put('admin_impersonator_id', $originalAdmin->id);
+
+        Auth::login($targetUser);
+        session()->regenerate();
+
+        $targetUser->update([
+            'active_session_id' => session()->getId(),
+        ]);
+
+        return redirect()->route('dashboard')->with('success', 'Mode Penyamaran Aktif.');
+    }
+
+    public function stopImpersonate()
+    {
+        if (!session()->has('admin_impersonator_id')) {
+            return redirect()->route('dashboard');
+        }
+
+        $adminId = session()->pull('admin_impersonator_id');
+        $originalAdmin = User::find($adminId);
+
+        if (!$originalAdmin || !$originalAdmin->hasRole('admin')) {
+            Auth::logout();
+            session()->invalidate();
+            session()->regenerateToken();
+            return redirect()->route('login')->with('error', 'Sesi otoritas admin tidak valid.');
+        }
+
+        Auth::login($originalAdmin);
+        session()->regenerate();
+
+        $originalAdmin->update([
+            'active_session_id' => session()->getId(),
+        ]);
+
+        return redirect()->route('admin.users.index')->with('success', 'Mode penyamaran dihentikan.');
     }
 }

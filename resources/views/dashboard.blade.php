@@ -47,7 +47,7 @@
                 <div>
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Sisa Pinjaman</p>
                     <h3 class="text-xl font-extrabold text-gray-900">
-                        Rp {{ number_format($sisaPinjaman, 0, ',', '.') }}
+                        Rp {{ number_format($totalSisaPinjaman, 0, ',', '.') }}
                     </h3>
                 </div>
             </div>

@@ -9,15 +9,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('activation_token')->nullable()->after('password');
-            $table->enum('status', ['active', 'pending', 'inactive'])->default('active')->after('role');
+            $table->string('active_session_id')->nullable()->after('last_login_ip');
+            $table->timestamp('force_logout_at')->nullable()->after('active_session_id');
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['activation_token', 'status']);
+            $table->dropColumn(['active_session_id', 'force_logout_at']);
         });
     }
 };

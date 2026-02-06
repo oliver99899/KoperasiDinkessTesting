@@ -10,28 +10,29 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {{-- BAGIAN KIRI TETAP SAMA (Tidak ada form input) --}}
+        {{-- BAGIAN KIRI: CARD PROFILE --}}
         <div class="lg:col-span-1">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative">
                 <div class="h-24 bg-red-700"></div>
                 <div class="px-6 pb-6 text-center">
                     <div class="relative -mt-12 mb-4 inline-flex">
                         <div class="h-24 w-24 rounded-full bg-white p-1 shadow-md">
-                            <div class="h-full w-full rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-3xl font-bold border border-gray-200">
-                                {{ substr($profile->nama_lengkap, 0, 1) }}
+                            <div class="h-full w-full rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-3xl font-bold border border-gray-200 uppercase">
+                                {{ substr($profile->nama_lengkap ?? Auth::user()->name, 0, 1) }}
                             </div>
                         </div>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900">{{ $profile->nama_lengkap }}</h3>
-                    <p class="text-sm text-gray-500 mb-4">{{ $profile->unit_kerja }}</p>
+                    <h3 class="text-lg font-bold text-gray-900">{{ $profile->nama_lengkap ?? Auth::user()->name }}</h3>
+                    <p class="text-sm text-gray-500 mb-4">{{ $profile->unitKerja->nama_unit ?? 'Unit Kerja Belum Diset' }}</p>
+                    
                     <div class="border-t border-gray-100 pt-4 text-left space-y-3">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500">NIK</span>
-                            <span class="font-medium text-gray-900">{{ $profile->nik }}</span>
+                            <span class="font-medium text-gray-900 font-mono">{{ $profile->nik ?? '-' }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Email</span>
-                            <span class="font-medium text-gray-900">{{ $user->email }}</span>
+                            <span class="text-gray-500">NIP</span>
+                            <span class="font-medium text-gray-900 font-mono">{{ Auth::user()->nip ?? '-' }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500">Status</span>
@@ -42,7 +43,7 @@
             </div>
         </div>
 
-        {{-- KOLOM KANAN (INPUT WA & ALAMAT) --}}
+        {{-- KOLOM KANAN: FORM EDIT --}}
         <div class="lg:col-span-2">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
@@ -56,35 +57,28 @@
                     @csrf
                     @method('PUT')
 
-                    {{-- Input HP --}}
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Nomor HP (WhatsApp)</label>
                         <div class="relative">
-                            {{-- PERBAIKAN POSISI IKON WA --}}
                             <i class="ph-bold ph-whatsapp-logo absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none"></i>
-                            
-                            <input type="text" name="no_hp" value="{{ old('no_hp', $profile->no_hp) }}" required 
+                            <input type="text" name="no_hp" value="{{ old('no_hp', $profile->no_hp ?? '') }}" required 
                                    class="w-full rounded-xl border-gray-300 py-3 pl-12 pr-4 text-gray-900 font-medium shadow-sm focus:border-red-600 focus:ring-red-600 placeholder:text-gray-400 transition-all">
                         </div>
                     </div>
 
-                    {{-- Input Alamat --}}
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Alamat Domisili</label>
                         <div class="relative">
-                            {{-- PERBAIKAN POSISI IKON MAP --}}
-                            {{-- Karena textarea tinggi, ikon map kita taruh agak ke atas (top-3.5) tapi sejajar --}}
-                            <i class="ph-bold ph-map-pin absolute left-4 top-3.5 text-gray-500 text-lg pointer-events-none"></i>
-                            
+                            <i class="ph-bold ph-map-pin absolute left-4 top-4 text-gray-500 text-lg pointer-events-none"></i>
                             <textarea name="alamat" rows="3" required 
-                                      class="w-full rounded-xl border-gray-300 py-3 pl-12 pr-4 text-gray-900 font-medium shadow-sm focus:border-red-600 focus:ring-red-600 placeholder:text-gray-400 transition-all">{{ old('alamat', $profile->alamat) }}</textarea>
+                                      class="w-full rounded-xl border-gray-300 py-3 pl-12 pr-4 text-gray-900 font-medium shadow-sm focus:border-red-600 focus:ring-red-600 placeholder:text-gray-400 transition-all">{{ old('alamat', $profile->alamat ?? '') }}</textarea>
                         </div>
                     </div>
 
                     <div class="pt-4 flex justify-end border-t border-gray-100">
                         <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-red-700/20 transition-all transform active:scale-[0.98] flex items-center gap-2">
                             <i class="ph-bold ph-floppy-disk"></i>
-                            SIMPAN
+                            SIMPAN PERUBAHAN
                         </button>
                     </div>
 
