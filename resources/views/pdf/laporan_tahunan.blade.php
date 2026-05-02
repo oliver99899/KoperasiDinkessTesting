@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Laporan Keuangan Tahunan - {{ $tahun }}</title>
+    <title>Laporan Keuangan Koperasi</title>
     <style>
         body { 
             font-family: "Times New Roman", Times, serif; 
@@ -62,7 +62,11 @@
     </table>
 
     <div class="report-title">Laporan Rekapitulasi Arus Kas Koperasi</div>
-    <div class="report-subtitle">Periode Tahun: {{ $tahun }}</div>
+    
+    {{-- BAGIAN YANG DIUBAH 1: Subtitle Laporan --}}
+    <div class="report-subtitle">
+        Periode: {{ \Carbon\Carbon::parse($start_date)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($end_date)->translatedFormat('d F Y') }}
+    </div>
 
     <div class="date-info">
         Dicetak pada: {{ \Carbon\Carbon::now()->locale('id')->isoFormat('dddd, D MMMM Y [jam] HH:mm') }}
@@ -79,10 +83,6 @@
             </tr>
         </thead>
         <tbody>
-            {{-- 
-                Logic: $transaksi adalah gabungan (Union) dari tabel Simpanan, Pencairan Pinjaman, dan Angsuran 
-                yang sudah diurutkan 'desc' berdasarkan created_at / tanggal 
-            --}}
             @forelse($transaksi as $t)
                 <tr class="{{ $t->tipe == 'keluar' ? 'row-keluar' : 'row-masuk' }}">
                     <td class="text-center">{{ \Carbon\Carbon::parse($t->tanggal)->format('d/m/Y') }}</td>
@@ -109,13 +109,15 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="text-center">Tidak ada data transaksi pada tahun ini.</td>
+                    {{-- BAGIAN YANG DIUBAH 2: Teks Data Kosong --}}
+                    <td colspan="5" class="text-center">Tidak ada data transaksi pada periode ini.</td>
                 </tr>
             @endforelse
         </tbody>
         <tfoot>
             <tr class="font-bold" style="background-color: #f9f9f9;">
-                <td colspan="3" class="text-center">TOTAL KAS TAHUN {{ $tahun }}</td>
+                {{-- BAGIAN YANG DIUBAH 3: Teks Total --}}
+                <td colspan="3" class="text-center">TOTAL KAS PERIODE INI</td>
                 <td class="text-right">Rp {{ number_format($total_masuk, 0, ',', '.') }}</td>
                 <td class="text-right">Rp {{ number_format($total_keluar, 0, ',', '.') }}</td>
             </tr>

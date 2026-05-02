@@ -91,8 +91,7 @@
                     Riwayat Angsuran
                 </x-sidebar-link>
             @endif
-
-            @if($mode === 'verifikator')
+@if($mode === 'verifikator')
                 <x-sidebar-link href="{{ route('verifikator.dashboard') }}" :active="request()->routeIs('verifikator.dashboard')" icon="ph-bold ph-chart-pie" class="font-semibold">
                     Dashboard Bendahara
                 </x-sidebar-link>
@@ -107,6 +106,11 @@
 
                 <x-sidebar-link href="{{ route('verifikator.angsuran.index') }}" :active="request()->routeIs('verifikator.angsuran.*')" icon="ph-bold ph-receipt" class="font-semibold">
                     Verifikasi Angsuran
+                </x-sidebar-link>
+
+                {{-- Menu Laporan Keuangan Baru --}}
+                <x-sidebar-link href="{{ route('verifikator.laporan.index') }}" :active="request()->routeIs('verifikator.laporan.*')" icon="ph-bold ph-file-pdf" class="font-semibold">
+                    Laporan Keuangan
                 </x-sidebar-link>
             @endif
 

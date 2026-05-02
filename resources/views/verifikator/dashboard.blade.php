@@ -1,24 +1,11 @@
 <x-app-layout title="Dashboard Verifikator">
 
     <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-black text-gray-900 tracking-tight">Ringkasan Eksekutif</h1>
-            <p class="text-sm text-gray-500 font-medium">Data real-time aset dan aktivitas operasional koperasi.</p>
-        </div>
-        <div class="flex items-center gap-3">
-            <form action="{{ route('verifikator.laporan.tahunan') }}" method="GET" class="flex items-center gap-2 bg-white p-2 rounded-2xl border border-gray-200 shadow-sm">
-                <select name="year" class="text-xs font-bold border-none focus:ring-0 rounded-xl bg-gray-50 pr-8">
-                    @for ($i = date('Y'); $i >= 2024; $i--)
-                        <option value="{{ $i }}">{{ $i }}</option>
-                    @endfor
-                </select>
-                <button type="submit" class="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95">
-                    <i class="ph-bold ph-file-pdf text-base"></i>
-                    UNDUH LAPORAN
-                </button>
-            </form>
-        </div>
+    <div>
+        <h1 class="text-2xl font-black text-gray-900 tracking-tight">Ringkasan Eksekutif</h1>
+        <p class="text-sm text-gray-500 font-medium">Data real-time aset dan aktivitas operasional koperasi.</p>
     </div>
+</div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">

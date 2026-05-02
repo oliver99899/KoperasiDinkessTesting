@@ -79,7 +79,7 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
         Route::middleware(['role:verifikator'])->prefix('verifikator')->name('verifikator.')->group(function () {
             Route::get('/dashboard', [VerifikatorController::class, 'index'])->name('dashboard');
             Route::get('/laporan/tahunan', [VerifikatorController::class, 'downloadLaporanTahunan'])->name('laporan.tahunan');
-
+           Route::get('/laporan-keuangan', [VerifikatorController::class, 'halamanLaporan'])->name('laporan.index');
             Route::get('/simpanan/members', [VerifikatorController::class, 'members'])->name('simpanan.members');
             Route::get('/simpanan', function() { return redirect()->route('verifikator.simpanan.members'); });
             Route::post('/simpanan', [VerifikatorController::class, 'storeSimpanan'])->name('simpanan.store');

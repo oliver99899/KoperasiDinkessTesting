@@ -40,15 +40,24 @@ class VerifikatorController extends Controller
             'pendingLoan', 
             'recentSimpanan'
         ));
+    } // Penutup fungsi index sudah diletakkan di tempat yang benar
+
+    public function halamanLaporan()
+    {
+        // Menampilkan halaman khusus cetak laporan
+        return view('verifikator.laporan'); 
     }
 
     public function downloadLaporanTahunan(Request $request)
     {
-        $tahun = $request->get('year', date('Y'));
+        // 1. Tangkap input tanggal dari view
+        $startDate = $request->get('start_date', date('Y-m-01')) . ' 00:00:00'; 
+        $endDate = $request->get('end_date', date('Y-m-d')) . ' 23:59:59';
 
+        // 2. Query Simpanan
         $simpanan = Simpanan::with('user.profile')
             ->whereHas('user')
-            ->whereYear('tanggal_potong', $tahun)
+            ->whereBetween('tanggal_potong', [$startDate, $endDate])
             ->whereNotNull('verified_at')
             ->get()
             ->map(function ($item) {
@@ -61,9 +70,10 @@ class VerifikatorController extends Controller
                 ];
             });
 
+        // 3. Query Pinjaman
         $pinjaman = Pinjaman::with('user.profile')
             ->whereHas('user')
-            ->whereYear('tanggal_cair', $tahun)
+            ->whereBetween('tanggal_cair', [$startDate, $endDate])
             ->where('status', 'dicairkan')
             ->get()
             ->map(function ($item) {
@@ -76,9 +86,10 @@ class VerifikatorController extends Controller
                 ];
             });
 
+        // 4. Query Angsuran
         $angsuran = Angsuran::with('pinjaman.user.profile')
             ->whereHas('pinjaman.user')
-            ->whereYear('tanggal_potong', $tahun)
+            ->whereBetween('tanggal_potong', [$startDate, $endDate])
             ->whereNotNull('verified_at')
             ->get()
             ->map(function ($item) {
@@ -93,11 +104,13 @@ class VerifikatorController extends Controller
 
         $transaksi = $simpanan->concat($pinjaman)->concat($angsuran)->sortByDesc('tanggal');
 
+        // Akumulasi total aset sejauh ini (tidak difilter tanggal)
         $akumulasi_simpanan = Simpanan::whereNotNull('verified_at')->sum('jumlah');
         $akumulasi_bunga = Angsuran::whereNotNull('verified_at')->sum('bunga_bayar');
         
         $data = [
-            'tahun' => $tahun,
+            'start_date' => date('Y-m-d', strtotime($startDate)),
+            'end_date' => date('Y-m-d', strtotime($endDate)),
             'transaksi' => $transaksi,
             'total_masuk' => $simpanan->sum('nominal') + $angsuran->sum('nominal'),
             'total_keluar' => $pinjaman->sum('nominal'),
@@ -107,7 +120,11 @@ class VerifikatorController extends Controller
         ];
 
         $pdf = Pdf::loadView('pdf.laporan_tahunan', $data);
-        return $pdf->download("Laporan_Keuangan_Koperasi_{$tahun}.pdf");
+        
+        $namaFileMulai = date('d-M-Y', strtotime($startDate));
+        $namaFileSampai = date('d-M-Y', strtotime($endDate));
+        
+        return $pdf->download("Laporan_Keuangan_Koperasi_{$namaFileMulai}_sd_{$namaFileSampai}.pdf");
     }
 
     public function members(Request $request)

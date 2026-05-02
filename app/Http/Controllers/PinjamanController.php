@@ -82,7 +82,7 @@ class PinjamanController extends Controller
             $count = Pinjaman::whereYear('tanggal_pengajuan', $year)->count() + 1;
             $nomorPinjaman = 'PJ-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-            Pinjaman::create([
+            $pinjaman = Pinjaman::create([
                 'user_id' => Auth::id(),
                 'nomor_pinjaman' => $nomorPinjaman,
                 'jumlah_pengajuan' => $request->jumlah_pengajuan,
@@ -95,7 +95,11 @@ class PinjamanController extends Controller
                 'dokumen_syarat' => $dokumenPaths,
             ]);
 
-            return redirect()->route('pinjaman.index')->with('success', 'Pengajuan pinjaman berhasil dikirim.');
+            $pdf = Pdf::loadView('pdf.surat_pengajuan', ['pinjaman' => $pinjaman]);
+            
+            $namaFile = 'Surat_Pengajuan_' . str_replace(' ', '_', Auth::user()->name) . '_' . date('dMY') . '.pdf';
+
+            return $pdf->download($namaFile);
         });
     }
 

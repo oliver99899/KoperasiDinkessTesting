@@ -57,7 +57,7 @@
                                 <div class="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                                     <i class="ph-bold ph-cloud-arrow-up text-2xl text-red-700 group-hover:scale-110 transition-transform"></i>
                                     <span class="text-xs text-gray-500 font-bold mt-2">Klik untuk Pilih File</span>
-                                    <p class="text-[10px] text-gray-400 mt-1 px-4">PDF, JPG, PNG (Maks. 5MB)</p>
+                                    <p class="text-[10px] text-gray-400 mt-1 px-4">KTP / Slip Gaji (Maks. 5MB)</p>
                                 </div>
                                 <input type="file" id="fileInput" name="dokumen_pendukung[]" multiple class="hidden" accept=".pdf,.jpg,.jpeg,.png" @change="addFiles">
                             </label>
@@ -83,10 +83,16 @@
                         </div>
                     </div>
 
-                    <div class="pt-4 border-t border-gray-100 flex justify-end">
-                        <button type="submit" class="w-full bg-red-700 hover:bg-red-800 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                    {{-- BAGIAN YANG DIUBAH: Tombol Submit & Teks Helper --}}
+                    <div class="pt-4 border-t border-gray-100 mt-4">
+                        <button type="submit" class="w-full bg-red-700 hover:bg-red-800 text-white font-black py-4 px-6 rounded-xl shadow-lg transition-all active:scale-95 tracking-wide uppercase flex items-center justify-center gap-2">
                             KIRIM PENGAJUAN SEKARANG
                         </button>
+                        
+                        <p class="text-[11px] text-gray-500 text-center mt-3 flex items-center justify-center gap-1.5 font-medium">
+                            <i class="ph-fill ph-info text-blue-500 text-sm"></i> 
+                            File surat pengajuan otomatis terunduh setelah diklik. Cetak dan serahkan ke Bendahara.
+                        </p>
                     </div>
                 </form>
             </div>
