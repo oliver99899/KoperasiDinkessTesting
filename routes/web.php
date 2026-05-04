@@ -74,6 +74,10 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
             Route::post('/unit-kerja', [UnitKerjaController::class, 'store'])->name('unit-kerja.store');
             Route::put('/unit-kerja/{id}', [UnitKerjaController::class, 'update'])->name('unit-kerja.update');
             Route::delete('/unit-kerja/{id}', [UnitKerjaController::class, 'destroy'])->name('unit-kerja.destroy');
+            Route::get('/rekening', [AdminController::class, 'indexRekening'])->name('rekening.index');
+            Route::post('/rekening', [AdminController::class, 'storeRekening'])->name('rekening.store');
+            Route::put('/rekening/{id}', [AdminController::class, 'updateRekening'])->name('rekening.update');
+            Route::delete('/rekening/{id}', [AdminController::class, 'destroyRekening'])->name('rekening.destroy');
         });
 
         Route::middleware(['role:verifikator'])->prefix('verifikator')->name('verifikator.')->group(function () {
@@ -85,6 +89,8 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
             Route::post('/simpanan', [VerifikatorController::class, 'storeSimpanan'])->name('simpanan.store');
             Route::get('/simpanan/{id}/history-data', [VerifikatorController::class, 'getHistoryData'])->name('simpanan.history.data');
             Route::delete('/simpanan/{id}', [VerifikatorController::class, 'destroySimpanan'])->name('simpanan.destroy');
+            Route::get('/bunga', [VerifikatorController::class, 'indexBunga'])->name('bunga.index');
+            Route::put('/bunga/{id}', [VerifikatorController::class, 'updateBunga'])->name('bunga.update');
 
             Route::get('/pinjaman', [VerifikatorController::class, 'indexPinjaman'])->name('pinjaman.index');
             Route::get('/pinjaman/{id}', [VerifikatorController::class, 'showPinjaman'])->name('pinjaman.show');
@@ -99,6 +105,7 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
                 Route::get('/transfer/{id}', [VerifikatorPembayaranAngsuranController::class, 'show'])->name('transfer.show');
                 Route::post('/transfer/{id}/approve', [VerifikatorPembayaranAngsuranController::class, 'approve'])->name('transfer.approve');
                 Route::post('/transfer/{id}/reject', [VerifikatorPembayaranAngsuranController::class, 'reject'])->name('transfer.reject');
+
             });
         });
     });

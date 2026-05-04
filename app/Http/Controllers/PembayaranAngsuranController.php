@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\RekeningKoperasi;
 use App\Models\Angsuran;
 use App\Models\PembayaranAngsuran;
 use App\Models\Pinjaman;
@@ -28,7 +28,8 @@ class PembayaranAngsuranController extends Controller
             ->latest('id')
             ->paginate(20);
 
-        return view('pembayaran.transfer.index', compact('items', 'pinjamanAktif'));
+       $rekening = RekeningKoperasi::getActive();
+        return view('pembayaran.transfer.index', compact('items', 'pinjamanAktif', 'rekening'));
     }
 
     public function create(Request $request, int $pinjaman_id, int $angsuran_ke)
@@ -44,7 +45,8 @@ class PembayaranAngsuranController extends Controller
 
         $nominal = $this->expectedNominal($pinjaman);
 
-        return view('pembayaran.transfer.create', compact('pinjaman', 'angsuran_ke', 'nominal'));
+        $rekening = RekeningKoperasi::getActive();
+        return view('pembayaran.transfer.create', compact('pinjaman', 'angsuran_ke', 'nominal', 'rekening'));
     }
 
     public function store(Request $request, int $pinjaman_id, int $angsuran_ke)

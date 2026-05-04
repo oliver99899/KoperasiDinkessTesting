@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BungaPinjaman;
 use App\Models\User;
 use App\Models\Simpanan;
 use App\Models\Pinjaman;
@@ -50,11 +51,10 @@ class VerifikatorController extends Controller
 
     public function downloadLaporanTahunan(Request $request)
     {
-        // 1. Tangkap input tanggal dari view
-        $startDate = $request->get('start_date', date('Y-m-01')) . ' 00:00:00'; 
+        $startDate = $request->get('start_date', date('Y-m-01')) . ' 00:00:00';
         $endDate = $request->get('end_date', date('Y-m-d')) . ' 23:59:59';
 
-        // 2. Query Simpanan
+        
         $simpanan = Simpanan::with('user.profile')
             ->whereHas('user')
             ->whereBetween('tanggal_potong', [$startDate, $endDate])
@@ -62,68 +62,120 @@ class VerifikatorController extends Controller
             ->get()
             ->map(function ($item) {
                 return (object)[
-                    'tanggal' => $item->tanggal_potong,
-                    'user' => $item->user,
-                    'deskripsi' => 'Simpanan Periode ' . $item->periode,
-                    'tipe' => 'masuk',
-                    'nominal' => $item->jumlah
+                    'tanggal'     => $item->tanggal_potong,
+                    'user'        => $item->user,
+                    'deskripsi'   => 'Simpanan Periode ' . $item->periode,
+                    'tipe'        => 'masuk',
+                    'kategori'    => 'simpanan',
+                    'nominal'     => $item->jumlah,
                 ];
             });
 
-        // 3. Query Pinjaman
-        $pinjaman = Pinjaman::with('user.profile')
+       
+        $pencairan = Pinjaman::with('user.profile')
             ->whereHas('user')
             ->whereBetween('tanggal_cair', [$startDate, $endDate])
             ->where('status', 'dicairkan')
             ->get()
             ->map(function ($item) {
                 return (object)[
-                    'tanggal' => $item->tanggal_cair,
-                    'user' => $item->user,
+                    'tanggal'   => $item->tanggal_cair,
+                    'user'      => $item->user,
                     'deskripsi' => 'Pencairan Pinjaman (#' . $item->nomor_pinjaman . ')',
-                    'tipe' => 'keluar',
-                    'nominal' => $item->jumlah_disetujui
+                    'tipe'      => 'keluar',
+                    'kategori'  => 'pencairan',
+                    'nominal'   => $item->jumlah_disetujui,
                 ];
             });
 
-        // 4. Query Angsuran
-        $angsuran = Angsuran::with('pinjaman.user.profile')
+        
+        $angsuranPokok = Angsuran::with('pinjaman.user.profile')
             ->whereHas('pinjaman.user')
             ->whereBetween('tanggal_potong', [$startDate, $endDate])
             ->whereNotNull('verified_at')
             ->get()
             ->map(function ($item) {
                 return (object)[
-                    'tanggal' => $item->tanggal_potong,
-                    'user' => $item->pinjaman->user,
-                    'deskripsi' => 'Angsuran ke-' . $item->angsuran_ke,
-                    'tipe' => 'masuk',
-                    'nominal' => $item->jumlah_bayar
+                    'tanggal'   => $item->tanggal_potong,
+                    'user'      => $item->pinjaman->user,
+                    'deskripsi' => 'Angsuran Pokok ke-' . $item->angsuran_ke,
+                    'tipe'      => 'masuk',
+                    'kategori'  => 'pokok',
+                    'nominal'   => $item->pokok_bayar,
                 ];
             });
 
-        $transaksi = $simpanan->concat($pinjaman)->concat($angsuran)->sortByDesc('tanggal');
+       
+        $angsuranBunga = Angsuran::with('pinjaman.user.profile')
+            ->whereHas('pinjaman.user')
+            ->whereBetween('tanggal_potong', [$startDate, $endDate])
+            ->whereNotNull('verified_at')
+            ->get()
+            ->map(function ($item) {
+                return (object)[
+                    'tanggal'   => $item->tanggal_potong,
+                    'user'      => $item->pinjaman->user,
+                    'deskripsi' => 'Pendapatan Bunga Angsuran ke-' . $item->angsuran_ke,
+                    'tipe'      => 'masuk',
+                    'kategori'  => 'bunga',
+                    'nominal'   => $item->bunga_bayar,
+                ];
+            });
 
-        // Akumulasi total aset sejauh ini (tidak difilter tanggal)
-        $akumulasi_simpanan = Simpanan::whereNotNull('verified_at')->sum('jumlah');
-        $akumulasi_bunga = Angsuran::whereNotNull('verified_at')->sum('bunga_bayar');
         
+        $transaksi = $simpanan
+            ->concat($pencairan)
+            ->concat($angsuranPokok)
+            ->concat($angsuranBunga)
+            ->sortByDesc('tanggal');
+
+       
+        $totalSimpananPeriode  = $simpanan->sum('nominal');
+        $totalPokokPeriode     = $angsuranPokok->sum('nominal');
+        $totalBungaPeriode     = $angsuranBunga->sum('nominal');
+        $totalPencairanPeriode = $pencairan->sum('nominal');
+        $totalMasuk            = $totalSimpananPeriode + $totalPokokPeriode + $totalBungaPeriode;
+        $totalKeluar           = $totalPencairanPeriode;
+        $selisihPeriode        = $totalMasuk - $totalKeluar;
+
+        
+        $akumulasiSimpanan  = Simpanan::whereNotNull('verified_at')->sum('jumlah');
+        $akumulasiPokok     = Angsuran::whereNotNull('verified_at')->sum('pokok_bayar');
+        $akumulasiBunga     = Angsuran::whereNotNull('verified_at')->sum('bunga_bayar');
+        $akumulasiPencairan = Pinjaman::where('status', '!=', 'ditolak')
+                                ->whereNotNull('tanggal_cair')
+                                ->sum('jumlah_disetujui');
+        $totalPiutang       = Pinjaman::whereIn('status', ['dicairkan'])
+                                ->sum('sisa_pinjaman');
+
+        $kasBersih    = $akumulasiSimpanan + $akumulasiPokok + $akumulasiBunga - $akumulasiPencairan;
+        $totalAset    = $kasBersih + $totalPiutang;
+
         $data = [
-            'start_date' => date('Y-m-d', strtotime($startDate)),
-            'end_date' => date('Y-m-d', strtotime($endDate)),
-            'transaksi' => $transaksi,
-            'total_masuk' => $simpanan->sum('nominal') + $angsuran->sum('nominal'),
-            'total_keluar' => $pinjaman->sum('nominal'),
-            'akumulasi_simpanan' => $akumulasi_simpanan,
-            'akumulasi_bunga' => $akumulasi_bunga,
-            'total_aset' => $akumulasi_simpanan + $akumulasi_bunga,
+            'start_date'             => date('Y-m-d', strtotime($startDate)),
+            'end_date'               => date('Y-m-d', strtotime($endDate)),
+            'transaksi'              => $transaksi,
+            'totalSimpananPeriode'   => $totalSimpananPeriode,
+            'totalPokokPeriode'      => $totalPokokPeriode,
+            'totalBungaPeriode'      => $totalBungaPeriode,
+            'totalPencairanPeriode'  => $totalPencairanPeriode,
+            'totalMasuk'             => $totalMasuk,
+            'totalKeluar'            => $totalKeluar,
+            'selisihPeriode'         => $selisihPeriode,
+            'akumulasiSimpanan'      => $akumulasiSimpanan,
+            'akumulasiPokok'         => $akumulasiPokok,
+            'akumulasiBunga'         => $akumulasiBunga,
+            'akumulasiPencairan'     => $akumulasiPencairan,
+            'totalPiutang'           => $totalPiutang,
+            'kasBersih'              => $kasBersih,
+            'totalAset'              => $totalAset,
         ];
 
         $pdf = Pdf::loadView('pdf.laporan_tahunan', $data);
-        
-        $namaFileMulai = date('d-M-Y', strtotime($startDate));
+
+        $namaFileMulai  = date('d-M-Y', strtotime($startDate));
         $namaFileSampai = date('d-M-Y', strtotime($endDate));
-        
+
         return $pdf->download("Laporan_Keuangan_Koperasi_{$namaFileMulai}_sd_{$namaFileSampai}.pdf");
     }
 
@@ -364,5 +416,29 @@ class VerifikatorController extends Controller
         ]);
 
         return redirect()->route('verifikator.pinjaman.index')->with('success', 'Pengajuan ditolak.');
+    }
+
+        public function indexBunga()
+    {
+        $bungaList = BungaPinjaman::orderBy('tenor_bulan')->get();
+        return view('verifikator.bunga.index', compact('bungaList'));
+    }
+
+    public function updateBunga(Request $request, $id)
+    {
+        $bunga = BungaPinjaman::findOrFail($id);
+
+        $request->validate([
+            'persen' => 'required|numeric|min:0.01|max:100',
+            'keterangan' => 'nullable|string|max:255',
+        ]);
+
+        $bunga->update([
+            'persen' => $request->persen,
+            'keterangan' => $request->keterangan,
+            'updated_by' => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Bunga tenor ' . $bunga->tenor_bulan . ' bulan berhasil diperbarui.');
     }
 }

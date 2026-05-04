@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Pinjaman;
 use App\Models\Simpanan;
+use App\Models\BungaPinjaman;
 use App\Support\HmacSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
 
 class PinjamanController extends Controller
 {
@@ -36,7 +38,9 @@ class PinjamanController extends Controller
             ->whereNotNull('verified_at')
             ->sum('jumlah');
 
-        return view('user.pinjaman_create', compact('totalSimpanan'));
+        $bungaList = BungaPinjaman::orderBy('tenor_bulan')->get();
+    
+        return view('user.pinjaman_create', compact('totalSimpanan', 'bungaList'));
     }
 
     public function destroy($id)
@@ -82,17 +86,21 @@ class PinjamanController extends Controller
             $count = Pinjaman::whereYear('tanggal_pengajuan', $year)->count() + 1;
             $nomorPinjaman = 'PJ-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
+            $bunga = BungaPinjaman::where('tenor_bulan', $request->durasi_bulan)->firstOrFail();
+
             $pinjaman = Pinjaman::create([
                 'user_id' => Auth::id(),
                 'nomor_pinjaman' => $nomorPinjaman,
                 'jumlah_pengajuan' => $request->jumlah_pengajuan,
                 'durasi_bulan' => $request->durasi_bulan,
-                'bunga_persen' => 1.00,
+                'bunga_id' => $bunga->id,
+                'bunga_persen' => $bunga->persen,
                 'alasan_pengajuan' => $request->alasan_pengajuan,
                 'status' => 'diajukan',
                 'sisa_pinjaman' => 0,
                 'tanggal_pengajuan' => now(),
                 'dokumen_syarat' => $dokumenPaths,
+
             ]);
 
             $pdf = Pdf::loadView('pdf.surat_pengajuan', ['pinjaman' => $pinjaman]);

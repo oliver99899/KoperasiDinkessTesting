@@ -36,13 +36,14 @@
                         <div>
                             <label class="block text-xs font-black text-gray-500 uppercase mb-2 tracking-wider">Jangka Waktu</label>
                             <select name="durasi_bulan" x-model="tenor" required @change="calculate()"
-                                class="w-full rounded-xl border-gray-300 py-3 font-semibold text-gray-900 focus:border-red-600 focus:ring-red-600 cursor-pointer">
-                                <option value="0">-- Pilih Durasi --</option>
-                                <option value="3">3 Bulan</option>
-                                <option value="6">6 Bulan</option>
-                                <option value="12">12 Bulan</option>
-                                <option value="24">24 Bulan</option>
-                            </select>
+                            class="w-full rounded-xl border-gray-300 py-3 font-semibold text-gray-900 focus:border-red-600 focus:ring-red-600 cursor-pointer">
+                            <option value="0">-- Pilih Durasi --</option>
+                            @foreach($bungaList as $bunga)
+                                <option value="{{ $bunga->tenor_bulan }}" data-persen="{{ $bunga->persen }}">
+                                    {{ $bunga->tenor_bulan }} Bulan (Bunga {{ $bunga->persen }}%)
+                                </option>
+                            @endforeach
+                        </select>
                         </div>
 
                         <div>
@@ -156,6 +157,7 @@
                 amount: 0,
                 formattedAmount: '',
                 tenor: 0,
+                bungaPersen: 0,
                 pokokPerBulan: 0,
                 bungaPerBulan: 0,
                 totalPerBulan: 0,
@@ -166,9 +168,13 @@
                     this.calculate();
                 },
                 calculate() {
+                    const select = document.querySelector('select[name="durasi_bulan"]');
+                    const selected = select?.options[select.selectedIndex];
+                    this.bungaPersen = selected ? parseFloat(selected.dataset.persen || 0) : 0;
+
                     if (this.amount > 0 && this.tenor > 0) {
                         this.pokokPerBulan = this.amount / this.tenor;
-                        this.bungaPerBulan = this.amount * 0.01;
+                        this.bungaPerBulan = this.amount * (this.bungaPersen / 100);
                         this.totalPerBulan = this.pokokPerBulan + this.bungaPerBulan;
                     } else {
                         this.pokokPerBulan = 0; this.bungaPerBulan = 0; this.totalPerBulan = 0;

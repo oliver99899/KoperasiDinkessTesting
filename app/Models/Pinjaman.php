@@ -38,6 +38,7 @@ class Pinjaman extends Model
         'decided_by',
         'decided_at',
         'signature',
+        'bunga_id',
     ];
 
     protected $casts = [
@@ -112,5 +113,10 @@ class Pinjaman extends Model
     public function angsuran()
     {
         return $this->hasMany(Angsuran::class, 'pinjaman_id')->orderBy('angsuran_ke', 'asc');
+    }
+
+    public function bunga()
+    {
+    return $this->belongsTo(BungaPinjaman::class, 'bunga_id');
     }
 }

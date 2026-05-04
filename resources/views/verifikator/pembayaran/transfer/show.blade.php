@@ -6,12 +6,27 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {{-- Foto Bukti --}}
+        {{-- Foto/PDF Bukti --}}
             <div class="bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-200">
-                <a href="{{ asset('storage/' . $item->bukti_path) }}" target="_blank">
-                    <img src="{{ asset('storage/' . $item->bukti_path) }}" class="w-full h-auto hover:scale-105 transition-transform duration-500">
-                </a>
-                <p class="p-4 text-center text-[10px] text-gray-400 font-bold uppercase">Klik gambar untuk memperbesar</p>
+                @php
+                    $ext = pathinfo($item->bukti_path, PATHINFO_EXTENSION);
+                @endphp
+
+                @if(in_array(strtolower($ext), ['jpg', 'jpeg', 'png']))
+                    <a href="{{ asset('storage/' . $item->bukti_path) }}" target="_blank">
+                        <img src="{{ asset('storage/' . $item->bukti_path) }}" class="w-full h-auto hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <p class="p-4 text-center text-[10px] text-gray-400 font-bold uppercase">Klik gambar untuk memperbesar</p>
+                @else
+                    <div class="flex flex-col items-center justify-center py-16 gap-4">
+                        <i class="ph-fill ph-file-pdf text-6xl text-red-600"></i>
+                        <p class="text-sm font-bold text-gray-600">File PDF</p>
+                        <a href="{{ asset('storage/' . $item->bukti_path) }}" target="_blank"
+                        class="bg-red-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-red-800 transition-all">
+                            Buka PDF
+                        </a>
+                    </div>
+                @endif
             </div>
 
             {{-- Form Verifikasi --}}

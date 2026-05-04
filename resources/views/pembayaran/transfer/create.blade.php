@@ -30,14 +30,14 @@
                     <div class="flex items-center gap-4">
                         <div class="h-14 w-14 rounded-xl bg-red-600 flex flex-col items-center justify-center text-white shrink-0 shadow-inner">
                             <span class="text-[8px] font-bold leading-none uppercase">BANK</span>
-                            <span class="text-[11px] font-black leading-none">JATENG</span>
+                            <span class="text-[11px] font-black leading-none">{{ strtoupper(Str::limit($rekening->nama_bank ?? 'N/A', 6, '')) }}</span>
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Nomor Rekening Bendahara</p>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{{ $rekening->nama_bank ?? 'Rekening Koperasi' }}</p>
                             <div class="flex items-center gap-2">
-                                <p id="no_rekening" class="text-xl font-black text-red-950 tracking-wider">502301000456539</p>
+                                <p id="no_rekening" class="text-xl font-black text-red-950 tracking-wider">{{ $rekening->nomor_rekening ?? '-' }}</p>
                             </div>
-                            <p class="text-[11px] font-bold text-red-700 uppercase mt-0.5">KOPERASI DINKES SEMARANG</p>
+                            <p class="text-[11px] font-bold text-red-700 uppercase mt-0.5">{{ $rekening->atas_nama ?? '-' }}</p>
                         </div>
                     </div>
                     

@@ -112,6 +112,10 @@
                 <x-sidebar-link href="{{ route('verifikator.laporan.index') }}" :active="request()->routeIs('verifikator.laporan.*')" icon="ph-bold ph-file-pdf" class="font-semibold">
                     Laporan Keuangan
                 </x-sidebar-link>
+
+                <x-sidebar-link href="{{ route('verifikator.bunga.index') }}" :active="request()->routeIs('verifikator.bunga.*')" icon="ph-bold ph-percent" class="font-semibold">
+                    Kelola Bunga
+                </x-sidebar-link>
             @endif
 
             @if($mode === 'admin')
@@ -125,6 +129,10 @@
 
                 <x-sidebar-link href="{{ route('admin.unit-kerja.index') }}" :active="request()->routeIs('admin.unit-kerja.*')" icon="ph-bold ph-buildings" class="font-semibold">
                     Unit Kerja
+                </x-sidebar-link>
+
+                <x-sidebar-link href="{{ route('admin.rekening.index') }}" :active="request()->routeIs('admin.rekening.*')" icon="ph-bold ph-bank" class="font-semibold">
+                    Rekening Koperasi
                 </x-sidebar-link>
             @endif
         </nav>

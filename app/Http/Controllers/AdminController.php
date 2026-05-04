@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RekeningKoperasi;
 use App\Models\UnitKerja;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -258,5 +259,73 @@ class AdminController extends Controller
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'Mode penyamaran dihentikan.');
+    }
+
+        public function indexRekening()
+    {
+        $rekening = RekeningKoperasi::orderByDesc('is_active')->orderBy('nama_bank')->get();
+        return view('admin.rekening.index', compact('rekening'));
+    }
+
+    public function storeRekening(Request $request)
+    {
+        $request->validate([
+            'nama_bank'      => 'required|string|max:100',
+            'nomor_rekening' => 'required|string|max:50',
+            'atas_nama'      => 'required|string|max:255',
+            'keterangan'     => 'nullable|string|max:255',
+        ]);
+
+        RekeningKoperasi::create([
+            'nama_bank'      => $request->nama_bank,
+            'nomor_rekening' => $request->nomor_rekening,
+            'atas_nama'      => $request->atas_nama,
+            'is_active'      => false,
+            'keterangan'     => $request->keterangan,
+            'updated_by'     => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Rekening baru berhasil ditambahkan.');
+    }
+
+    public function updateRekening(Request $request, $id)
+    {
+        $request->validate([
+            'nama_bank'      => 'required|string|max:100',
+            'nomor_rekening' => 'required|string|max:50',
+            'atas_nama'      => 'required|string|max:255',
+            'keterangan'     => 'nullable|string|max:255',
+            'is_active'      => 'boolean',
+        ]);
+
+        $rekening = RekeningKoperasi::findOrFail($id);
+
+        // Kalau rekening ini diaktifkan, nonaktifkan yang lain
+        if ($request->boolean('is_active')) {
+            RekeningKoperasi::where('id', '!=', $id)->update(['is_active' => false]);
+        }
+
+        $rekening->update([
+            'nama_bank'      => $request->nama_bank,
+            'nomor_rekening' => $request->nomor_rekening,
+            'atas_nama'      => $request->atas_nama,
+            'is_active'      => $request->boolean('is_active'),
+            'keterangan'     => $request->keterangan,
+            'updated_by'     => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Data rekening berhasil diperbarui.');
+    }
+
+    public function destroyRekening($id)
+    {
+        $rekening = RekeningKoperasi::findOrFail($id);
+
+        if ($rekening->is_active) {
+            return back()->with('error', 'Rekening aktif tidak dapat dihapus. Aktifkan rekening lain terlebih dahulu.');
+        }
+
+        $rekening->delete();
+        return back()->with('success', 'Rekening berhasil dihapus.');
     }
 }
