@@ -55,6 +55,8 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
         Route::delete('/pinjaman/{id}', [PinjamanController::class, 'destroy'])->name('pinjaman.destroy');
         Route::post('/pinjaman', [PinjamanController::class, 'store'])->name('pinjaman.store');
         Route::get('/pinjaman/{id}/download-bukti', [PinjamanController::class, 'downloadBukti'])->name('pinjaman.download');
+        Route::get('/pinjaman/{id}/download-surat', [PinjamanController::class, 'downloadSurat'])->name('pinjaman.surat');
+        Route::get('/pinjaman/{id}/download-surat-word', [PinjamanController::class, 'downloadSuratWord'])->name('pinjaman.surat.word');
         Route::get('/angsuran', [AngsuranController::class, 'indexUser'])->name('angsuran.index');
 
         Route::prefix('pembayaran')->name('pembayaran.')->group(function () {

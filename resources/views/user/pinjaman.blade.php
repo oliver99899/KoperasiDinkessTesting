@@ -84,13 +84,24 @@
 
                                     {{-- Tombol Batal jika status masih diajukan --}}
                                     @if($item->status == 'diajukan')
-                                        <form action="{{ route('pinjaman.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan dan menghapus pengajuan ini?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-[10px] font-black text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest">
-                                                <i class="ph-bold ph-trash"></i> Batalkan
-                                            </button>
-                                        </form>
+                                        <div x-data="{ format: 'pdf' }" class="flex items-center gap-2">
+                                            <select x-model="format"
+                                                    class="rounded-lg border-gray-200 text-[10px] font-bold text-gray-600 py-1.5 px-2 focus:border-red-600 focus:ring-red-600 bg-white shadow-sm">
+                                                <option value="pdf">PDF</option>
+                                                <option value="word">Word</option>
+                                            </select>
+                                            <a :href="format === 'pdf' ? '{{ route('pinjaman.surat', $item->id) }}' : '{{ route('pinjaman.surat.word', $item->id) }}'"
+                                            class="inline-flex items-center gap-1 bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all shadow-sm">
+                                                <i class="ph-bold ph-download-simple"></i> Cetak
+                                            </a>
+                                            <form action="{{ route('pinjaman.destroy', $item->id) }}" method="POST"
+                                                onsubmit="return confirm('Batalkan pengajuan ini?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="text-[10px] font-black text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest">
+                                                    <i class="ph-bold ph-trash"></i> Batalkan
+                                                </button>
+                                            </form>
+                                        </div>
                                     @endif
 
                                     @if(in_array($item->status, ['ditolak', 'lunas']))
