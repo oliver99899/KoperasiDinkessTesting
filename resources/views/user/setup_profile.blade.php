@@ -72,10 +72,16 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <div>
+                        <div x-data="{ val: '{{ old('nama_lengkap', auth()->user()->name) }}', get ok() { return this.val.length >= 3 } }">
                             <label class="block text-sm font-bold text-gray-800 mb-2">Nama Lengkap <span class="text-red-700">*</span></label>
-                            <input type="text" name="nama_lengkap" value="{{ old('nama_lengkap', auth()->user()->name) }}" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm">
+                            <input type="text" name="nama_lengkap" x-model="val" required
+                                :class="val.length > 0 ? (ok ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                class="w-full rounded-xl py-3 px-4 text-gray-900 shadow-sm text-sm transition-all">
+                            <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="val.length > 0">
+                                <i :class="ok ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                                <span :class="ok ? 'text-green-600' : 'text-red-500'" x-text="ok ? 'Nama valid' : 'Minimal 3 karakter'"></span>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1">Sesuai KTP, minimal 3 karakter</p>
                         </div>
 
                         <div>
@@ -84,10 +90,21 @@
                                    class="w-full rounded-xl border-gray-200 bg-gray-100 py-3 px-4 text-gray-500 shadow-sm text-sm cursor-not-allowed">
                         </div>
 
-                        <div>
+                        <div x-data="{ val: '{{ old('nik') }}', get ok() { return /^[0-9]{16}$/.test(this.val) } }">
                             <label class="block text-sm font-bold text-gray-800 mb-2">NIK <span class="text-red-700">*</span></label>
-                            <input type="text" inputmode="numeric" name="nik" value="{{ old('nik') }}" required minlength="16" maxlength="16"
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm">
+                            <div class="relative">
+                                <input type="text" name="nik" x-model="val" required maxlength="16" inputmode="numeric"
+                                    :class="val.length > 0 ? (ok ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                    class="w-full rounded-xl py-3 pl-4 pr-16 text-gray-900 shadow-sm text-sm transition-all">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold"
+                                    :class="val.length === 16 ? 'text-green-600' : 'text-gray-400'"
+                                    x-text="val.length + '/16'"></span>
+                            </div>
+                            <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="val.length > 0">
+                                <i :class="ok ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                                <span :class="ok ? 'text-green-600' : 'text-red-500'" x-text="ok ? 'NIK valid' : 'Harus tepat 16 digit angka (' + val.length + '/16)'"></span>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1">16 digit angka sesuai KTP</p>
                         </div>
 
                         <div>
@@ -100,16 +117,51 @@
                             </select>
                         </div>
 
-                        <div>
+                       <div x-data="{ val: '{{ old('no_hp') }}', get ok() { return /^[0-9]{10,15}$/.test(this.val) } }">
                             <label class="block text-sm font-bold text-gray-800 mb-2">Nomor WhatsApp <span class="text-red-700">*</span></label>
-                            <input type="tel" name="no_hp" value="{{ old('no_hp') }}" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm">
+                            <div class="relative">
+                                <input type="text" name="no_hp" x-model="val" required inputmode="numeric"
+                                    :class="val.length > 0 ? (ok ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                    class="w-full rounded-xl py-3 px-4 text-gray-900 shadow-sm text-sm transition-all">
+                            </div>
+                            <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="val.length > 0">
+                                <i :class="ok ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                                <span :class="ok ? 'text-green-600' : 'text-red-500'" x-text="ok ? 'Nomor valid' : 'Minimal 10 digit angka'"></span>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1">Minimal 10 digit, contoh: 08123456789</p>
                         </div>
                         
-                        <div>
+                        <div x-data="{ 
+                            val: '{{ old('tanggal_lahir') }}',
+                            get ok() {
+                                if (!this.val) return false;
+                                const today = new Date();
+                                const birth = new Date(this.val);
+                                const age = today.getFullYear() - birth.getFullYear();
+                                const m = today.getMonth() - birth.getMonth();
+                                const actualAge = m < 0 || (m === 0 && today.getDate() < birth.getDate()) ? age - 1 : age;
+                                return actualAge >= 17;
+                            },
+                            get ageText() {
+                                if (!this.val) return '';
+                                const today = new Date();
+                                const birth = new Date(this.val);
+                                const age = today.getFullYear() - birth.getFullYear();
+                                const m = today.getMonth() - birth.getMonth();
+                                const actualAge = m < 0 || (m === 0 && today.getDate() < birth.getDate()) ? age - 1 : age;
+                                return actualAge + ' tahun';
+                            }
+                        }">
                             <label class="block text-sm font-bold text-gray-800 mb-2">Tanggal Lahir <span class="text-red-700">*</span></label>
-                            <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm">
+                            <input type="date" name="tanggal_lahir" x-model="val" required
+                                :max="new Date(new Date().setFullYear(new Date().getFullYear()-17)).toISOString().split('T')[0]"
+                                :class="val ? (ok ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                class="w-full rounded-xl py-3 px-4 text-gray-900 shadow-sm text-sm transition-all">
+                            <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="val">
+                                <i :class="ok ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                                <span :class="ok ? 'text-green-600' : 'text-red-500'" x-text="ok ? 'Usia ' + ageText + ' - valid' : 'Minimal usia 17 tahun'"></span>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1">Minimal usia 17 tahun</p>
                         </div>
 
                         <div class="md:col-span-2">
@@ -134,27 +186,103 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-bold text-gray-800 mb-2">Alamat Email <span class="text-red-700">*</span></label>
-                            <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm">
+                    <div x-data="{ val: '{{ old('email', auth()->user()->email) }}', get ok() { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.val) } }">
+                        <label class="block text-sm font-bold text-gray-800 mb-2">Alamat Email <span class="text-red-700">*</span></label>
+                        <input type="email" name="email" x-model="val" required
+                            :class="val.length > 0 ? (ok ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                            class="w-full rounded-xl py-3 px-4 text-gray-900 shadow-sm text-sm transition-all">
+                        <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="val.length > 0">
+                            <i :class="ok ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                            <span :class="ok ? 'text-green-600' : 'text-red-500'" x-text="ok ? 'Format email valid' : 'Format email tidak valid'"></span>
                         </div>
-
-                        <div>
-                            <label class="block text-sm font-bold text-gray-800 mb-2">Password Baru <span class="text-red-700">*</span></label>
-                            <input type="password" name="password" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm"
-                                   placeholder="Minimal 8 karakter">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-800 mb-2">Konfirmasi Password <span class="text-red-700">*</span></label>
-                            <input type="password" name="password_confirmation" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm"
-                                   placeholder="Ulangi password">
-                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1">Contoh: nama@dinkes.semarangkota.go.id</p>
                     </div>
-                </div>
+
+                        <div x-data="{
+                            pwd: '',
+                            pwdConfirm: '',
+                            show: false,
+                            showConfirm: false,
+                            get hasMin() { return this.pwd.length >= 8 },
+                            get hasUpper() { return /[A-Z]/.test(this.pwd) },
+                            get hasLower() { return /[a-z]/.test(this.pwd) },
+                            get hasNumber() { return /[0-9]/.test(this.pwd) },
+                            get strength() {
+                                const score = [this.hasMin, this.hasUpper, this.hasLower, this.hasNumber].filter(Boolean).length;
+                                if (score <= 1) return { label: 'Lemah', color: 'bg-red-500', width: '25%', text: 'text-red-600' };
+                                if (score === 2) return { label: 'Cukup', color: 'bg-yellow-500', width: '50%', text: 'text-yellow-600' };
+                                if (score === 3) return { label: 'Sedang', color: 'bg-blue-500', width: '75%', text: 'text-blue-600' };
+                                return { label: 'Kuat', color: 'bg-green-500', width: '100%', text: 'text-green-600' };
+                            },
+                            get pwdOk() { return this.hasMin && this.hasUpper && this.hasLower && this.hasNumber },
+                            get confirmOk() { return this.pwdConfirm.length > 0 && this.pwd === this.pwdConfirm }
+                        }">
+                            {{-- Password --}}
+                            <div class="mb-5">
+                                <label class="block text-sm font-bold text-gray-800 mb-2">Password Baru <span class="text-red-700">*</span></label>
+                                <div class="relative">
+                                    <input :type="show ? 'text' : 'password'" name="password" x-model="pwd" required
+                                        :class="pwd.length > 0 ? (pwdOk ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                        class="w-full rounded-xl py-3 pl-4 pr-12 text-gray-900 shadow-sm text-sm transition-all"
+                                        placeholder="Minimal 8 karakter">
+                                    <button type="button" @click="show = !show"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <i :class="show ? 'ph-bold ph-eye-slash' : 'ph-bold ph-eye'" class="text-lg"></i>
+                                    </button>
+                                </div>
+
+                                {{-- Strength bar --}}
+                                <div class="mt-2" x-show="pwd.length > 0">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">Kekuatan Password</span>
+                                        <span class="text-[11px] font-bold" :class="strength.text" x-text="strength.label"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="h-1.5 rounded-full transition-all duration-300"
+                                            :class="strength.color" :style="'width: ' + strength.width"></div>
+                                    </div>
+                                </div>
+
+                                {{-- Checklist syarat --}}
+                                <div class="mt-2 grid grid-cols-2 gap-1" x-show="pwd.length > 0">
+                                    <div class="flex items-center gap-1.5 text-[11px]">
+                                        <i :class="hasMin ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-400'"></i>
+                                        <span :class="hasMin ? 'text-green-600' : 'text-red-400'">Minimal 8 karakter</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-[11px]">
+                                        <i :class="hasUpper ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-400'"></i>
+                                        <span :class="hasUpper ? 'text-green-600' : 'text-red-400'">Huruf besar (A-Z)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-[11px]">
+                                        <i :class="hasLower ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-400'"></i>
+                                        <span :class="hasLower ? 'text-green-600' : 'text-red-400'">Huruf kecil (a-z)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-[11px]">
+                                        <i :class="hasNumber ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-400'"></i>
+                                        <span :class="hasNumber ? 'text-green-600' : 'text-red-400'">Angka (0-9)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Konfirmasi Password --}}
+                            <div>
+                                <label class="block text-sm font-bold text-gray-800 mb-2">Konfirmasi Password <span class="text-red-700">*</span></label>
+                                <div class="relative">
+                                    <input :type="showConfirm ? 'text' : 'password'" name="password_confirmation" x-model="pwdConfirm" required
+                                        :class="pwdConfirm.length > 0 ? (confirmOk ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                        class="w-full rounded-xl py-3 pl-4 pr-12 text-gray-900 shadow-sm text-sm transition-all"
+                                        placeholder="Ulangi password">
+                                    <button type="button" @click="showConfirm = !showConfirm"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <i :class="showConfirm ? 'ph-bold ph-eye-slash' : 'ph-bold ph-eye'" class="text-lg"></i>
+                                    </button>
+                                </div>
+                                <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="pwdConfirm.length > 0">
+                                    <i :class="confirmOk ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                                    <span :class="confirmOk ? 'text-green-600' : 'text-red-500'" x-text="confirmOk ? 'Password cocok' : 'Password tidak cocok'"></span>
+                                </div>
+                            </div>
+                        </div>
 
                 <div class="h-px bg-gray-100 mx-8"></div>
 
@@ -182,11 +310,17 @@
                             </select>
                         </div>
 
-                        <div>
+                        <div x-data="{ val: '{{ old('nomor_rekening') }}', get ok() { return /^[0-9]{8,20}$/.test(this.val) } }">
                             <label class="block text-sm font-bold text-gray-800 mb-2">Nomor Rekening <span class="text-red-700">*</span></label>
-                            <input type="text" inputmode="numeric" name="nomor_rekening" value="{{ old('nomor_rekening') }}" required
-                                   class="w-full rounded-xl border-gray-300 py-3 px-4 text-gray-900 shadow-sm focus:border-red-600 focus:ring-red-600 text-sm"
-                                   placeholder="Masukkan nomor rekening">
+                            <input type="text" name="nomor_rekening" x-model="val" required inputmode="numeric"
+                                :class="val.length > 0 ? (ok ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-400 focus:border-red-400 focus:ring-red-400') : 'border-gray-300 focus:border-red-600 focus:ring-red-600'"
+                                class="w-full rounded-xl py-3 px-4 text-gray-900 shadow-sm text-sm transition-all"
+                                placeholder="Masukkan nomor rekening">
+                            <div class="mt-1.5 flex items-center gap-1.5 text-[11px]" x-show="val.length > 0">
+                                <i :class="ok ? 'ph-fill ph-check-circle text-green-600' : 'ph-fill ph-x-circle text-red-500'"></i>
+                                <span :class="ok ? 'text-green-600' : 'text-red-500'" x-text="ok ? 'Nomor rekening valid' : 'Minimal 8 digit angka'"></span>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1">Hanya angka, minimal 8 digit</p>
                         </div>
                     </div>
                 </div>
